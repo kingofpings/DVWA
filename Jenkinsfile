@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker {
             image 'localhost:5000/jenkins-agent-dvwa:latest'  // Replace with your custom Jenkins agent image
-            args '-v /var/run/docker.sock:/var/run/docker.sock --privileged -v /var/lib/jenkins:/var/lib/jenkins:rw'
+            args '-v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/jenkins:/var/lib/jenkins:rw --privileged -user jenkins'
         }
     }
 
@@ -200,7 +200,11 @@ pipeline {
 
     post {
         always {
-            sh 'docker-compose down || true'
+            script {
+                node {
+                    sh 'docker-compose down || true'
+                }
+            }
         }
         success {
             echo "Pipeline completed successfully!"
