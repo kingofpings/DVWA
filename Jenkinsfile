@@ -36,13 +36,10 @@ pipeline {
 
         stage('Checkout Source') {
             steps {
-                checkout([
-                    $class: 'GitSCM', 
-                    branches: [[name: "refs/heads/${env.BRANCH_NAME}"]],
-                    userRemoteConfigs: [[url: 'https://github.com/your-org/your-dvwa-repo.git']]
-                ])
+                checkout scm
             }
         }
+
 
         stage('Build and Scan in Docker') {
             steps {
