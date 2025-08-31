@@ -1,12 +1,23 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'localhost:5000/jenkins-agent-dvwa:latest'  // Replace with your custom Jenkins agent image
+            args '-v /var/run/docker.sock:/var/run/docker.sock --privileged'
+            label 'docker-agent'
+        }
+    }
+
+    parameters {
+        string(name: 'REGISTRY_URL', defaultValue: 'localhost:5000', description: 'Docker Registry URL')
+        string(name: 'REGISTRY_CREDENTIALS_ID', defaultValue: 'dockerRegistry', description: 'Jenkins Credentials ID for Docker Registry')
+    }
 
     environment {
         DOCKER_IMAGE = "dvwa:${env.GIT_COMMIT}"
         DOCKER_IMAGE_BRANCH = "dvwa:${env.BRANCH_NAME}"
-        LOCAL_REGISTRY = "localhost:5000"
-        DEPLOY_PORT = '8081'    // default, changed dynamically later
-        DEPLOY_NETWORK = 'uat_net' // default, changed dynamically later
+        LOCAL_REGISTRY = "${params.REGISTRY_URL}"
+        DEPLOY_PORT = '8081'    // default, overridden below
+        DEPLOY_NETWORK = 'uat_net' // default, overridden below
     }
 
     options {
@@ -16,7 +27,7 @@ pipeline {
     }
 
     stages {
-        stage('Set Environment') {
+        stage('Set Environment Variables') {
             steps {
                 script {
                     if (env.BRANCH_NAME == 'prod') {
@@ -30,33 +41,23 @@ pipeline {
             }
         }
 
-        stage('Checkout') {
+        stage('Checkout Source') {
             steps {
                 checkout scm
-                script {
-                    docker.image('alpine/git').inside('-u root --privileged -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/jenkins:/var/lib/jenkins:rw') {
-                        sh 'git fetch --tags'
-                        sh 'git tag -l'
-                        sh '''
-                        if [ -f vulnerabilities/api/composer.lock ]; then
-                            echo "composer.lock found in vulnerabilities/api"
-                        else
-                            echo "WARNING: composer.lock missing!"
-                        fi
-                        '''
-                    }
-                }
+                sh '''
+                if [ -f vulnerabilities/api/composer.lock ]; then
+                    echo "composer.lock found in vulnerabilities/api"
+                else
+                    echo "Warning: composer.lock missing!"
+                fi
+                '''
             }
         }
 
         stage('Build / Prepare App') {
             steps {
                 dir('vulnerabilities/api') {
-                    script {
-                        docker.image('composer:latest').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock') {
-                            sh 'composer install --no-interaction --no-progress --no-suggest --prefer-dist'
-                        }
-                    }
+                    sh 'composer install --no-interaction --no-progress --no-suggest --prefer-dist'
                 }
             }
         }
@@ -64,21 +65,16 @@ pipeline {
         stage('Code Quality') {
             steps {
                 dir('vulnerabilities/api') {
-                    script {
-                        docker.image('sonarsource/sonar-scanner-cli:latest').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock') {
-                            withSonarQubeEnv('SonarQube') {
-                                sh '''
-                                if [ -f sonar-project.properties ]; then
-                                    sonar-scanner
-                                elif command -v phpstan > /dev/null; then
-                                    phpstan analyse . || exit 1
-                                elif command -v phpcs > /dev/null; then
-                                    phpcs . || exit 1
-                                else
-                                    echo "No code analysis tools found!"
-                                    exit 1
-                                fi
-                                '''
+                    withSonarQubeEnv('SonarQube') {
+                        script {
+                            if (fileExists('sonar-project.properties')) {
+                                sh 'sonar-scanner'
+                            } else if (sh(script: 'command -v phpstan', returnStatus: true) == 0) {
+                                sh 'phpstan analyse .'
+                            } else if (sh(script: 'command -v phpcs', returnStatus: true) == 0) {
+                                sh 'phpcs .'
+                            } else {
+                                error "No code quality tool found: sonar-scanner, phpstan, or phpcs"
                             }
                         }
                     }
@@ -88,63 +84,57 @@ pipeline {
 
         stage('SAST') {
             steps {
-                script {
-                    docker.image('returntocorp/semgrep').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock') {
-                        sh 'semgrep --config=auto vulnerabilities/api --output semgrep-report.sarif || exit 1'
-                    }
-                }
-                archiveArtifacts artifacts: 'semgrep-report.sarif', allowEmptyArchive: true
+                sh 'semgrep --config=auto vulnerabilities/api --output semgrep-report.sarif'
+                archiveArtifacts artifacts: 'semgrep-report.sarif'
             }
         }
 
         stage('SCA') {
             steps {
                 script {
-                    docker.image('aquasec/trivy:latest').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock') {
-                        sh '''
-                        if [ -f vulnerabilities/api/composer.lock ]; then
-                            trivy fs vulnerabilities/api --severity CRITICAL --exit-code 1 || exit 1
-                        else
-                            echo "composer.lock missing, skipping SCA"
-                        fi
-                        '''
+                    if (fileExists('vulnerabilities/api/composer.lock')) {
+                        sh 'trivy fs vulnerabilities/api --severity CRITICAL --exit-code 1'
+                    } else {
+                        echo "Skipping SCA scan: composer.lock not found"
                     }
                 }
                 archiveArtifacts artifacts: 'trivy-report.json', allowEmptyArchive: true
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Docker Login') {
             steps {
                 script {
-                    docker.image('docker:latest').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock') {
-                        sh """
-                        docker build --no-cache --pull \
-                          --label commit=${env.GIT_COMMIT} \
-                          --label branch=${env.BRANCH_NAME} \
-                          --label build_url=${env.BUILD_URL} \
-                          -t ${DOCKER_IMAGE} \
-                          -t ${DOCKER_IMAGE_BRANCH} .
-                        """
+                    docker.withRegistry("http://${params.REGISTRY_URL}", params.REGISTRY_CREDENTIALS_ID) {
+                        echo "Logged into Docker registry ${params.REGISTRY_URL}"
                     }
                 }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh """
+                docker build --no-cache --pull \
+                  --label commit=${env.GIT_COMMIT} \
+                  --label branch=${env.BRANCH_NAME} \
+                  --label build_url=${env.BUILD_URL} \
+                  -t ${DOCKER_IMAGE} \
+                  -t ${DOCKER_IMAGE_BRANCH} .
+                """
             }
         }
 
         stage('Image Scan') {
             steps {
-                script {
-                    docker.image('aquasec/trivy:latest').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock') {
-                        sh "trivy image --severity CRITICAL --exit-code 1 ${DOCKER_IMAGE}"
-                    }
-                }
+                sh "trivy image --severity CRITICAL --exit-code 1 ${DOCKER_IMAGE}"
             }
         }
 
-        stage('Push Image') {
+        stage('Push Docker Image') {
             steps {
                 script {
-                    docker.image('docker:latest').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock') {
+                    docker.withRegistry("http://${params.REGISTRY_URL}", params.REGISTRY_CREDENTIALS_ID) {
                         sh """
                         docker tag ${DOCKER_IMAGE} ${LOCAL_REGISTRY}/${DOCKER_IMAGE}
                         docker tag ${DOCKER_IMAGE_BRANCH} ${LOCAL_REGISTRY}/${DOCKER_IMAGE_BRANCH}
@@ -165,15 +155,13 @@ pipeline {
             }
             steps {
                 script {
-                    docker.image('docker/compose:latest').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock') {
-                        if (env.BRANCH_NAME == 'prod') {
-                            input message: "Manual approval required for PROD deployment"
-                        }
-                        sh """
-                        docker network create ${DEPLOY_NETWORK} || true
-                        docker-compose -f docker-compose-${BRANCH_NAME}.yml up -d
-                        """
+                    if (env.BRANCH_NAME == 'prod') {
+                        input message: "Manual approval required for PROD deployment"
                     }
+                    sh """
+                    docker network create ${DEPLOY_NETWORK} || true
+                    docker-compose -f docker-compose-${BRANCH_NAME}.yml up -d
+                    """
                 }
             }
         }
@@ -181,16 +169,16 @@ pipeline {
         stage('DAST') {
             steps {
                 script {
-                    docker.image('owasp/zap2docker-stable').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock') {
-                        if (env.BRANCH_NAME == 'dev') {
-                            sh """
-                            zap-baseline.py -t http://localhost:${DEPLOY_PORT} -g gen.conf -r zap_report.html || exit 1
-                            """
-                        } else if (env.BRANCH_NAME == 'prod') {
-                            sh """
-                            zap-baseline.py -t http://localhost:${DEPLOY_PORT} -g gen.conf -r zap_report.html -J -w 2
-                            """
-                        }
+                    if (env.BRANCH_NAME == 'dev') {
+                        sh """
+                        docker run --rm -v \$PWD:/zap/wrk -t owasp/zap2docker-stable zap-baseline.py \
+                          -t http://localhost:${DEPLOY_PORT} -g gen.conf -r zap_report.html || exit 1
+                        """
+                    } else if (env.BRANCH_NAME == 'prod') {
+                        sh """
+                        docker run --rm -v \$PWD:/zap/wrk -t owasp/zap2docker-stable zap-baseline.py \
+                          -t http://localhost:${DEPLOY_PORT} -g gen.conf -r zap_report.html -J -w 2
+                        """
                     }
                 }
                 archiveArtifacts artifacts: 'zap_report.html', allowEmptyArchive: true
@@ -207,24 +195,19 @@ pipeline {
                     alwaysLinkToLastBuild: false,
                     allowMissing: true
                 ])
-                // Add other report publishing steps if needed
             }
         }
     }
 
     post {
         always {
-            script {
-                docker.image('docker/compose:latest').inside('-v /var/run/docker.sock:/var/run/docker.sock') {
-                    sh 'docker-compose down || true'
-                }
-            }
+            sh 'docker-compose down || true'
         }
         success {
             echo "Pipeline completed successfully!"
         }
         failure {
-            echo "Pipeline failed. Check logs and reports."
+            echo "Pipeline failed! Please check logs and reports."
         }
     }
 }
