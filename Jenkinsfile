@@ -11,7 +11,6 @@ pipeline {
     }
 
     options {
-        ansiColor('xterm')
         buildDiscarder(logRotator(numToKeepStr: '10'))
         timestamps()
         skipDefaultCheckout()
@@ -149,7 +148,10 @@ pipeline {
 
         stage('Deploy') {
             when {
-                branch branches: ['dev', 'prod']  // fixed syntax here
+                anyOf {
+                    branch 'dev'
+                    branch 'prod'
+                }
             }
             steps {
                 container('docker') {
