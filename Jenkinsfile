@@ -1,18 +1,34 @@
 pipeline {
     agent any
+
     environment {
         DOCKER_IMAGE = "dvwa:${env.GIT_COMMIT}"
         DOCKER_IMAGE_BRANCH = "dvwa:${env.BRANCH_NAME}"
         LOCAL_REGISTRY = "localhost:5000"
-        DEPLOY_PORT = (env.BRANCH_NAME == 'prod') ? '8082' : '8081'
-        DEPLOY_NETWORK = (env.BRANCH_NAME == 'prod') ? 'prod_net' : 'uat_net'
+        // Default values; dynamically overridden below
+        DEPLOY_PORT = '8081'
+        DEPLOY_NETWORK = 'uat_net'
     }
+
     options {
         ansiColor('xterm')
         buildDiscarder(logRotator(numToKeepStr: '10'))
         timestamps()
+        skipDefaultCheckout()
     }
+
     stages {
+        stage('Set Environment') {
+            steps {
+                script {
+                    if (env.BRANCH_NAME == 'prod') {
+                        env.DEPLOY_PORT = '8082'
+                        env.DEPLOY_NETWORK = 'prod_net'
+                    }
+                }
+            }
+        }
+
         stage('Checkout') {
             steps {
                 checkout scm
@@ -20,33 +36,34 @@ pipeline {
                     sh 'git fetch --tags'
                     sh 'git tag -l'
                     sh '''
-                    if [ -f vulnerabilities/api/composer.lock ]; then
-                        echo "composer.lock found in vulnerabilities/api.";
-                    else
-                        echo "composer.lock missing in vulnerabilities/api!";
-                    fi
+                       if [ -f vulnerabilities/api/composer.lock ]; then
+                           echo "composer.lock found in vulnerabilities/api/."
+                       else
+                           echo "WARNING: composer.lock missing in vulnerabilities/api/!"
+                       fi
                     '''
                 }
             }
         }
+
         stage('Build / Prepare App') {
             steps {
                 container('composer') {
                     dir('vulnerabilities/api') {
                         sh '''
                         if [ -f composer.json ]; then
-                            composer install --no-interaction
+                            composer install --no-interaction --no-progress --no-suggest --prefer-dist
                         fi
                         '''
                     }
                 }
             }
         }
+
         stage('Code Quality') {
             steps {
                 container('sonar-scanner') {
                     withSonarQubeEnv('SonarQube') {
-                        // Adjust PHPStan/PHPCS to scan files in vulnerabilities/api as needed
                         dir('vulnerabilities/api') {
                             sh '''
                             if [ -f sonar-project.properties ]; then
@@ -65,10 +82,10 @@ pipeline {
                 }
             }
         }
+
         stage('SAST') {
             steps {
                 container('semgrep') {
-                    // Run Semgrep on vulnerabilities/api or root, depending on your policy
                     sh '''
                     semgrep --config=auto vulnerabilities/api --output semgrep-report.sarif || exit 1
                     '''
@@ -76,6 +93,7 @@ pipeline {
                 }
             }
         }
+
         stage('SCA') {
             steps {
                 container('trivy') {
@@ -83,13 +101,14 @@ pipeline {
                     if [ -f vulnerabilities/api/composer.lock ]; then
                         trivy fs vulnerabilities/api --severity CRITICAL --exit-code 1 || exit 1
                     else
-                        echo "composer.lock missing in vulnerabilities/api for SCA"
+                        echo "composer.lock missing in vulnerabilities/api for SCA; skipping scan"
                     fi
                     '''
                     archiveArtifacts artifacts: 'trivy-report.json', allowEmptyArchive: true
                 }
             }
         }
+
         stage('Build Docker Image') {
             steps {
                 container('docker') {
@@ -104,6 +123,7 @@ pipeline {
                 }
             }
         }
+
         stage('Image Scan') {
             steps {
                 container('trivy') {
@@ -113,6 +133,7 @@ pipeline {
                 }
             }
         }
+
         stage('Push Image') {
             steps {
                 container('docker') {
@@ -125,12 +146,10 @@ pipeline {
                 }
             }
         }
+
         stage('Deploy') {
             when {
-                anyOf {
-                    branch 'dev'
-                    branch 'prod'
-                }
+                branch 'dev', 'prod'
             }
             steps {
                 container('docker') {
@@ -146,6 +165,7 @@ pipeline {
                 }
             }
         }
+
         stage('DAST') {
             steps {
                 container('zap') {
@@ -166,13 +186,15 @@ pipeline {
                 }
             }
         }
+
         stage('Publish Reports') {
             steps {
                 publishHTML([reportDir: '.', reportFiles: 'zap_report.html', reportName: 'ZAP Report'])
-                // Add other publishers if needed
+                // Additional report publishers can be added here
             }
         }
     }
+
     post {
         always {
             container('docker') {
@@ -183,7 +205,7 @@ pipeline {
             echo "Pipeline completed successfully!"
         }
         failure {
-            echo "Pipeline failed. Check logs and reports."
+            echo "Pipeline failed. Please check logs and reports."
         }
     }
 }
