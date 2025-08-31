@@ -45,8 +45,8 @@ pipeline {
             steps {
                 script {
                     docker.image("${env.REGISTRY_URL}/jenkins-agent-dvwa:latest")
-                        .inside('-u jenkins --privileged -v /var/run/docker.sock:/var/run/docker.sock') {
-                            
+                        .inside('-u jenkins --privileged -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/jenkins:/var/lib/jenkins:rw') {
+
                             dir('vulnerabilities/api') {
                                 sh 'composer install --no-interaction --no-progress --no-suggest --prefer-dist'
                             }
