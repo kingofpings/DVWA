@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker {
             image 'localhost:5000/jenkins-agent-dvwa:latest'  // Replace with your custom Jenkins agent image
-            args '-v /var/run/docker.sock:/var/run/docker.sock --privileged'
+            args '-v /var/run/docker.sock:/var/run/docker.sock --privileged -v /var/lib/jenkins:/var/lib/jenkins:rw'
         }
     }
 
