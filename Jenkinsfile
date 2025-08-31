@@ -53,7 +53,7 @@ pipeline {
             steps {
                 dir('vulnerabilities/api') {
                     script {
-                        docker.image('composer:latest').inside {
+                        docker.image('composer:latest').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock') {
                             sh 'composer install --no-interaction --no-progress --no-suggest --prefer-dist'
                         }
                     }
@@ -65,7 +65,7 @@ pipeline {
             steps {
                 dir('vulnerabilities/api') {
                     script {
-                        docker.image('sonarsource/sonar-scanner-cli:latest').inside {
+                        docker.image('sonarsource/sonar-scanner-cli:latest').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock') {
                             withSonarQubeEnv('SonarQube') {
                                 sh '''
                                 if [ -f sonar-project.properties ]; then
@@ -89,7 +89,7 @@ pipeline {
         stage('SAST') {
             steps {
                 script {
-                    docker.image('returntocorp/semgrep').inside {
+                    docker.image('returntocorp/semgrep').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock') {
                         sh 'semgrep --config=auto vulnerabilities/api --output semgrep-report.sarif || exit 1'
                     }
                 }
@@ -100,7 +100,7 @@ pipeline {
         stage('SCA') {
             steps {
                 script {
-                    docker.image('aquasec/trivy:latest').inside {
+                    docker.image('aquasec/trivy:latest').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock') {
                         sh '''
                         if [ -f vulnerabilities/api/composer.lock ]; then
                             trivy fs vulnerabilities/api --severity CRITICAL --exit-code 1 || exit 1
@@ -117,7 +117,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.image('docker:latest').inside('-v /var/run/docker.sock:/var/run/docker.sock') {
+                    docker.image('docker:latest').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock') {
                         sh """
                         docker build --no-cache --pull \
                           --label commit=${env.GIT_COMMIT} \
@@ -134,7 +134,7 @@ pipeline {
         stage('Image Scan') {
             steps {
                 script {
-                    docker.image('aquasec/trivy:latest').inside('-v /var/run/docker.sock:/var/run/docker.sock') {
+                    docker.image('aquasec/trivy:latest').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock') {
                         sh "trivy image --severity CRITICAL --exit-code 1 ${DOCKER_IMAGE}"
                     }
                 }
@@ -144,7 +144,7 @@ pipeline {
         stage('Push Image') {
             steps {
                 script {
-                    docker.image('docker:latest').inside('-v /var/run/docker.sock:/var/run/docker.sock') {
+                    docker.image('docker:latest').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock') {
                         sh """
                         docker tag ${DOCKER_IMAGE} ${LOCAL_REGISTRY}/${DOCKER_IMAGE}
                         docker tag ${DOCKER_IMAGE_BRANCH} ${LOCAL_REGISTRY}/${DOCKER_IMAGE_BRANCH}
@@ -165,7 +165,7 @@ pipeline {
             }
             steps {
                 script {
-                    docker.image('docker/compose:latest').inside('-v /var/run/docker.sock:/var/run/docker.sock') {
+                    docker.image('docker/compose:latest').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock') {
                         if (env.BRANCH_NAME == 'prod') {
                             input message: "Manual approval required for PROD deployment"
                         }
@@ -181,7 +181,7 @@ pipeline {
         stage('DAST') {
             steps {
                 script {
-                    docker.image('owasp/zap2docker-stable').inside {
+                    docker.image('owasp/zap2docker-stable').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock') {
                         if (env.BRANCH_NAME == 'dev') {
                             sh """
                             zap-baseline.py -t http://localhost:${DEPLOY_PORT} -g gen.conf -r zap_report.html || exit 1
