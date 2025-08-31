@@ -149,7 +149,7 @@ pipeline {
 
         stage('Deploy') {
             when {
-                branch 'dev', 'prod'
+                branch branches: ['dev', 'prod']  // fixed syntax here
             }
             steps {
                 container('docker') {
@@ -189,7 +189,14 @@ pipeline {
 
         stage('Publish Reports') {
             steps {
-                publishHTML([reportDir: '.', reportFiles: 'zap_report.html', reportName: 'ZAP Report'])
+                publishHTML([
+                    reportDir: '.', 
+                    reportFiles: 'zap_report.html', 
+                    reportName: 'ZAP Report',
+                    keepAll: true,
+                    alwaysLinkToLastBuild: false,
+                    allowMissing: true
+                ])
                 // Additional report publishers can be added here
             }
         }
