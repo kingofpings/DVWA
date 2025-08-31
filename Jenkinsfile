@@ -34,7 +34,7 @@ pipeline {
             steps {
                 checkout scm
                 script {
-                    docker.image('alpine/git').inside('--privileged -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/jenkins:/var/lib/jenkins:rw') {
+                    docker.image('alpine/git').inside('-u root --privileged -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/jenkins:/var/lib/jenkins:rw') {
                         sh 'git fetch --tags'
                         sh 'git tag -l'
                         sh '''
