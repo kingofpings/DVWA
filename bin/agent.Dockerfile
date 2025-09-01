@@ -15,10 +15,6 @@ RUN apk add --no-cache \
 # install php and required extensions including openssl and ctype
 RUN apk add --no-cache \
     php php-cli php-phar php-mbstring php-xml php-curl php-json php-tokenizer php-zip php-openssl php-ctype
-# Install phpstan and other PHP tools
-RUN wget https://getcomposer.org/download/latest-stable/composer.phar -O composer.phar \
-    && chmod +x composer.phar \
-    && mv composer.phar /usr/local/bin/composer
 
 # Install composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
