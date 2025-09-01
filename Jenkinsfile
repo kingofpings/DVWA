@@ -3,7 +3,7 @@ pipeline {
     agent {
         docker {
             image 'localhost:5000/jenkins-agent-dvwa:latest'
-            args '-u jenkins'  // run as jenkins user inside container
+            args '-u jenkins -v /var/run/docker.sock:/var/run/docker.sock'  // run as jenkins user inside container
         }
     }
 
