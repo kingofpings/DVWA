@@ -11,6 +11,7 @@ pipeline {
     options {
         buildDiscarder(logRotator(numToKeepStr: '10'))
         timestamps()
+        customWorkspace('/home/jenkins/workspace/${env.BRANCH_NAME}')
     }
 
     stages {
