@@ -1,0 +1,93 @@
+pipeline {
+    agent any
+
+    tools {
+        nodejs 'node' // Make sure Node.js tool is configured in Jenkins
+    }
+
+    environment {
+        DOCKER_IMAGE = "your-dockerhub-username/your-node-app"
+        IMAGE_NAME = "your-app-name"
+        PATH = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${env.PATH}"
+    }
+
+    stages {
+        stage('Create Docker Network') {
+            steps {
+                script {
+                    sh 'docker network create devsecops-network || true'
+                }
+            }
+        }
+
+        stage('Checkout Code') {
+            steps {
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[
+                        url: 'https://your.git.repo.url/your-repo.git',
+                        credentialsId: 'your-credentials-id' 
+// Replace with Jenkins credential ID or remove if public repo
+                    ]]
+                ])
+            }
+        }
+
+        stage('Build') {
+            steps {
+                script {
+                    dockerImage = docker.build("${IMAGE_NAME}:
+${env.BUILD_NUMBER}")
+                }
+            }
+        }
+
+        stage('Container Vulnerability Scan - Trivy') {
+            steps {
+                script {
+                    sh """
+                        docker run --rm \
+                        -v /var/run/docker.sock:/var/run/docker.sock \
+                        aquasec/trivy image \
+                        --format json -o trivy-report.json \
+                        ${IMAGE_NAME}:${BUILD_NUMBER}
+                    """
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                script {
+                    sh 'docker rm -f your-app-name || 
+echo "Container not found"'
+                    sh "docker run -d --name your-app-name 
+--network devsecops-network -p 8081:3000 ${IMAGE_NAME}:${env.BUILD_NUMBER}"
+                }
+            }
+        }
+
+        stage('Security Scan - OWASP ZAP') {
+            steps {
+                script {
+                    sh '''
+                        docker run --rm \
+                        --network devsecops-network \
+                        -v $(pwd):/zap/wrk:rw \
+                        -t ghcr.io/zaproxy/zaproxy:stable \
+                        zap-baseline.py -t http://your-app-name:3000 
+-r zap_report.html -i
+                    '''
+                }
+            }
+        }
+
+        stage('Archive Report') {
+            steps {
+                archiveArtifacts artifacts: 'zap_report.html', 
+fingerprint: true
+            }
+        }
+    }
+}
