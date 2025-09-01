@@ -2,7 +2,7 @@ pipeline {
     // Use Docker agent with your custom Jenkins agent image
     agent {
         docker {
-            image 'jenkins-agent-dvwa:latest'
+            image 'localhost:5000/jenkins-agent-dvwa:latest'
             args '-u jenkins'  // run as jenkins user inside container
         }
     }
