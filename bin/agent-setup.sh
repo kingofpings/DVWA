@@ -24,7 +24,6 @@ sudo apt-get install -y \
   php-json \
   php-tokenizer \
   php-zip \
-  php-openssl \
   php-ctype \
   unzip  # unzip used by composer sometimes
 
