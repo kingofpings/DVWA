@@ -8,7 +8,7 @@ RUN apk add --no-cache \
     openssh-client \
     python3 \
     py3-pip \
-    openjdk21-jre \
+    openjdk17-jre \
     nodejs npm \
     jq
 
