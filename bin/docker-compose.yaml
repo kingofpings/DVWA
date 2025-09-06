@@ -3,7 +3,7 @@ services:
     image: registry:latest
     restart: always
     ports:
-      - "5000:5000"
+      - "192.168.146.133:5000:5000"
     volumes:
       # Mount the password file
       - ./registry/registry.password:/auth/registry.password
