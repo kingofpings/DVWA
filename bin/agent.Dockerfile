@@ -37,9 +37,9 @@ RUN curl -L https://github.com/zaproxy/zaproxy/releases/download/v${ZAP_VERSION}
 
 ENV PATH="/opt/ZAP_${ZAP_VERSION}:${PATH}"
 
-# Setup Jenkins user with UID and GID 123
-RUN addgroup -g 123 -S jenkins && \
-    adduser -u 120 -S jenkins -G jenkins
+# Setup Jenkins user with UID and GID 1000
+RUN addgroup -g 1000 -S jenkins && \
+    adduser -u 1000 -S jenkins -G jenkins
 
 RUN mkdir -p /var/lib/jenkins \
     && chown -R jenkins:jenkins /var/lib/jenkins \
