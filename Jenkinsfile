@@ -2,13 +2,13 @@ pipeline {
     // Use Docker agent with your custom Jenkins agent image
     agent {
         docker {
-            image 'localhost:5000/jenkins-agent-dvwa:latest'
-            args '-u jenkins -v /var/run/docker.sock:/var/run/docker.sock'  // run as jenkins user inside container
+            image '192.168.146.133:5000/jenkins-agent-dvwa:latest'
+            args '-u jenkins -v /var/run/docker.sock:/var/run/docker.sock --privileged'  // run as jenkins user inside container
         }
     }
 
     environment {
-        REGISTRY_URL = 'localhost:5000'
+        REGISTRY_URL = '192.168.146.133:5000'
         DOCKER_CREDENTIALS_ID = 'dockerRegistry'
         DEPLOY_PORT = '8081'       // default, overridden by branch
         DEPLOY_NETWORK = 'uat_net' // default, overridden by branch
