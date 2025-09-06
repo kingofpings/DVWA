@@ -1,17 +1,11 @@
 pipeline {
-    // Use Docker agent with your custom Jenkins agent image
-    agent {
-        docker {
-            image '192.168.146.133:5000/jenkins-agent-dvwa:latest'
-            args '-u jenkins -v /var/run/docker.sock:/var/run/docker.sock --privileged'  // run as jenkins user inside container
-        }
-    }
+    agent any
 
     environment {
         REGISTRY_URL = '192.168.146.133:5000'
         DOCKER_CREDENTIALS_ID = 'dockerRegistry'
-        DEPLOY_PORT = '8081'       // default, overridden by branch
-        DEPLOY_NETWORK = 'uat_net' // default, overridden by branch
+        DEPLOY_PORT = '8081'
+        DEPLOY_NETWORK = 'uat_net'
     }
 
     options {
@@ -44,10 +38,9 @@ pipeline {
             }
         }
 
-        stage('Build and Scan in Docker') {
+        stage('Build and Scan') {
             steps {
                 script {
-                    // Running inside Docker agent, so no nested docker inside here unless Docker socket mounted
                     sh '''
                         cd vulnerabilities/api
                         composer install --no-interaction --no-progress --no-suggest --prefer-dist
@@ -76,7 +69,6 @@ pipeline {
                     }
                     archiveArtifacts artifacts: 'trivy-report.json', allowEmptyArchive: true
 
-                    // Docker login, build, scan, and push if Docker socket is mounted, otherwise skip or handle externally
                     docker.withRegistry("http://${env.REGISTRY_URL}", env.DOCKER_CREDENTIALS_ID) {
                         echo "Logged into Docker registry ${env.REGISTRY_URL}"
                         sh """
