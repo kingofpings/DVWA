@@ -28,7 +28,7 @@ sudo apt-get install -y \
   unzip  # unzip used by composer sometimes
 
 echo "Installing Composer..."
-curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
 
 echo "Installing Trivy..."
 TRIVY_VERSION=0.65.0
