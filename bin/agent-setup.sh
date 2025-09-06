@@ -38,7 +38,7 @@ sudo mv trivy /usr/local/bin/
 rm trivy.tar.gz
 
 echo "Installing Semgrep..."
-sudo pip3 install --no-cache-dir semgrep
+sudo snap install semgrep
 
 echo "Installing OWASP ZAP..."
 ZAP_VERSION=2.16.1
