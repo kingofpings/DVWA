@@ -63,8 +63,16 @@ if [ -f "$JENKINS_COMPOSER_BIN_DIR/phpcs" ]; then
   sudo chmod +x "$JENKINS_COMPOSER_BIN_DIR/phpcs"
 fi
 
-echo "Add the following to Jenkins agent's environment if needed:"
-echo "export PATH=\"$JENKINS_COMPOSER_BIN_DIR:\$PATH\""
+# Add export line to Jenkins user's ~/.profile if not already present
+JENKINS_PROFILE="/var/lib/jenkins/.profile"
+EXPORT_LINE="export PATH=\"$JENKINS_COMPOSER_BIN_DIR:\$PATH\""
+
+# Check and append only if not already present
+sudo grep -qxF "$EXPORT_LINE" "$JENKINS_PROFILE" || echo "$EXPORT_LINE" | sudo tee -a "$JENKINS_PROFILE"
+
+echo "PATH for Composer global binaries added permanently to Jenkins user's profile."
+echo "Path: $JENKINS_COMPOSER_BIN_DIR"
+echo "Profile: $JENKINS_PROFILE"
 
 echo "Installation complete. Please ensure Docker engine is installed and running separately."
 
