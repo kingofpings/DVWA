@@ -45,19 +45,6 @@ pipeline {
                         cd vulnerabilities/api
                         composer install --no-interaction --no-progress --no-suggest --prefer-dist
 
-                        // if [ ! -f sonar-project.properties ]; then
-                        //     if command -v phpstan >/dev/null 2>&1; then
-                        //         phpstan analyse .
-                        //     elif command -v phpcs >/dev/null 2>&1; then
-                        //         phpcs .
-                        //     else
-                        //         echo "No code quality tool found"
-                        //         exit 1
-                        //     fi
-                        // else
-                        //     echo "SonarQube analysis will be done in the next stage"
-                        // fi
-
                         semgrep --config=auto vulnerabilities/api --output semgrep-report.sarif
                     '''
                     archiveArtifacts 'semgrep-report.sarif'
