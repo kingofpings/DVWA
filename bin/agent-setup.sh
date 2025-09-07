@@ -55,7 +55,7 @@ sudo chmod +x /usr/local/bin/docker-compose
 echo "Installing PHPStan and PHPCS globally for Jenkins user..."
 # Run as jenkins user (adjust if needed)
 composer global require phpstan/phpstan squizlabs/php_codesniffer
-JENKINS_COMPOSER_BIN_DIR=$(sudo -u jenkins composer global config bin-dir --absolute)
+JENKINS_COMPOSER_BIN_DIR=$(composer global config bin-dir --absolute)
 if [ -f "$JENKINS_COMPOSER_BIN_DIR/phpstan" ]; then
   sudo chmod +x "$JENKINS_COMPOSER_BIN_DIR/phpstan"
 fi
