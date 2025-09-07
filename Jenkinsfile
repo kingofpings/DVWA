@@ -43,7 +43,7 @@ pipeline {
                 script {
                     sh '''
                         cd vulnerabilities/api
-                        composer install --no-interaction --no-progress --no-suggest --prefer-dist
+                        composer install --no-interaction --no-progress --prefer-dist
 
                         if [ -f sonar-project.properties ]; then
                             sonar-scanner

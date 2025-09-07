@@ -26,6 +26,7 @@ sudo apt-get install -y \
   php-zip \
   php-ctype \
   unzip  # unzip used by composer sometimes
+  
 
 echo "Installing Composer..."
 curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
@@ -41,7 +42,7 @@ echo "Installing Semgrep..."
 sudo snap install semgrep
 
 echo "Installing OWASP ZAP..."
-ZAP_VERSION=2.16.1
+ZAP_VERSION=2.15.0
 wget https://github.com/zaproxy/zaproxy/releases/download/v${ZAP_VERSION}/ZAP_${ZAP_VERSION}_Linux.tar.gz -O zap.tar.gz
 sudo tar -xzf zap.tar.gz -C /opt
 rm zap.tar.gz
@@ -53,7 +54,7 @@ sudo chmod +x /usr/local/bin/docker-compose
 
 echo "Installing PHPStan and PHPCS globally for Jenkins user..."
 # Run as jenkins user (adjust if needed)
-sudo -u jenkins composer global require phpstan/phpstan squizlabs/php_codesniffer
+sudo composer global require phpstan/phpstan squizlabs/php_codesniffer
 JENKINS_COMPOSER_BIN_DIR=$(sudo -u jenkins composer global config bin-dir --absolute)
 if [ -f "$JENKINS_COMPOSER_BIN_DIR/phpstan" ]; then
   sudo chmod +x "$JENKINS_COMPOSER_BIN_DIR/phpstan"
