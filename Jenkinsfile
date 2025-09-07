@@ -47,7 +47,7 @@ pipeline {
 
                         if [ -f sonar-project.properties ]; then
                             sonar-scanner
-                        elif command -v phpstan >/dev/null 2>&1; then
+                        elif command -v /home/jenkins/.composer/vendor/bin/phpstan >/dev/null 2>&1; then
                             /home/jenkins/.composer/vendor/bin/phpstan analyse .
                         elif command -v phpcs >/dev/null 2>&1; then
                             /home/jenkins/.composer/vendor/bin/phpcs .
