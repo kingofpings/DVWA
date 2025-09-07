@@ -43,34 +43,61 @@ pipeline {
                 script {
                     sh '''
                         cd vulnerabilities/api
-                        composer install --no-interaction --no-progress --prefer-dist
+                        composer install --no-interaction --no-progress --no-suggest --prefer-dist
 
-                        if [ -f sonar-project.properties ]; then
-                            sonar-scanner
-                        elif command -v /home/jenkins/.config/composer/vendor/bin/phpstan >/dev/null 2>&1; then
-                            /home/jenkins/.config/composer/vendor/bin/phpstan analyse .
-                        elif command -v /home/jenkins/.config/composer/vendor/bin/phpcs >/dev/null 2>&1; then
-                            /home/jenkins/.config/composer/vendor/bin/phpcs .
+                        if [ ! -f sonar-project.properties ]; then
+                            if command -v phpstan >/dev/null 2>&1; then
+                                phpstan analyse .
+                            elif command -v phpcs >/dev/null 2>&1; then
+                                phpcs .
+                            else
+                                echo "No code quality tool found"
+                                exit 1
+                            fi
                         else
-                            echo "No code quality tool found"
-                            exit 1
+                            echo "SonarQube analysis will be done in the next stage"
                         fi
 
                         semgrep --config=auto vulnerabilities/api --output semgrep-report.sarif
                     '''
                     archiveArtifacts 'semgrep-report.sarif'
+                }
+            }
+        }
 
-                    script {
-                        if (fileExists('vulnerabilities/api/composer.lock')) {
-                            sh 'trivy fs vulnerabilities/api --severity CRITICAL --exit-code 1 || true'
-                        } else {
-                            echo "Skipping SCA scan: composer.lock not found"
-                        }
+        stage('SonarQube Analysis') {
+            environment {
+                SCANNER_HOME = tool 'SonarQube Scanner'  // must match Jenkins Global Tool Configuration
+            }
+            steps {
+                withSonarQubeEnv('SonarQube') {  // must match SonarQube server config name in Jenkins
+                    sh '''
+                        $SCANNER_HOME/bin/sonar-scanner \
+                        -Dsonar.projectKey=dvwa \
+                        -Dsonar.sources=vulnerabilities/api \
+                        -Dsonar.host.url=$SONAR_HOST_URL
+                    '''
+                }
+            }
+        }
+
+        stage('Trivy Scan') {
+            steps {
+                script {
+                    if (fileExists('vulnerabilities/api/composer.lock')) {
+                        sh 'trivy fs vulnerabilities/api --severity CRITICAL --exit-code 1 || true'
+                    } else {
+                        echo "Skipping SCA scan: composer.lock not found"
                     }
-                    archiveArtifacts artifacts: 'trivy-report.json', allowEmptyArchive: true
+                }
+                archiveArtifacts artifacts: 'trivy-report.json', allowEmptyArchive: true
+            }
+        }
 
+        stage('Docker Build and Push') {
+            steps {
+                script {
                     docker.withRegistry("http://${env.REGISTRY_URL}", env.DOCKER_CREDENTIALS_ID) {
-                        echo "Logged into Docker registry ${env.REGISTRY_URL}"
                         sh """
                             docker build --no-cache --pull \
                                 --label commit=${env.GIT_COMMIT} \
@@ -80,7 +107,6 @@ pipeline {
                                 -t ${env.IMAGE_NAME_BRANCH} .
                         """
                         sh "trivy image --severity CRITICAL --exit-code 1 ${env.IMAGE_NAME} || true"
-
                         sh "docker push ${env.IMAGE_NAME}"
                         sh "docker push ${env.IMAGE_NAME_BRANCH}"
                     }
