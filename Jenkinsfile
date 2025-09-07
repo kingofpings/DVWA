@@ -45,7 +45,7 @@ pipeline {
                         cd vulnerabilities/api
                         composer install --no-interaction --no-progress --no-suggest --prefer-dist
 
-                        semgrep --config=auto vulnerabilities/api --output semgrep-report.sarif
+                        semgrep --config=auto . --output semgrep-report.sarif
                     '''
                     archiveArtifacts 'semgrep-report.sarif'
                 }
