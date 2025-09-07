@@ -47,10 +47,10 @@ pipeline {
 
                         if [ -f sonar-project.properties ]; then
                             sonar-scanner
-                        elif command -v /home/jenkins/.composer/vendor/bin/phpstan >/dev/null 2>&1; then
-                            /home/jenkins/.composer/vendor/bin/phpstan analyse .
-                        elif command -v phpcs >/dev/null 2>&1; then
-                            /home/jenkins/.composer/vendor/bin/phpcs .
+                        elif command -v /home/jenkins/.config/composer/vendor/bin/phpstan >/dev/null 2>&1; then
+                            /home/jenkins/.config/composer/vendor/bin/phpstan analyse .
+                        elif command -v /home/jenkins/.config/composer/vendor/bin/phpcs >/dev/null 2>&1; then
+                            /home/jenkins/.config/composer/vendor/bin/phpcs .
                         else
                             echo "No code quality tool found"
                             exit 1
