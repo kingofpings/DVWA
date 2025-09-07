@@ -48,9 +48,9 @@ pipeline {
                         if [ -f sonar-project.properties ]; then
                             sonar-scanner
                         elif command -v phpstan >/dev/null 2>&1; then
-                            phpstan analyse .
+                            /home/jenkins/.composer/vendor/bin/phpstan analyse .
                         elif command -v phpcs >/dev/null 2>&1; then
-                            phpcs .
+                            /home/jenkins/.composer/vendor/bin/phpcs .
                         else
                             echo "No code quality tool found"
                             exit 1
