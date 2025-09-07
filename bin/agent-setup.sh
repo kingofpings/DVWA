@@ -63,5 +63,8 @@ if [ -f "$JENKINS_COMPOSER_BIN_DIR/phpcs" ]; then
   sudo chmod +x "$JENKINS_COMPOSER_BIN_DIR/phpcs"
 fi
 
+echo "Add the following to Jenkins agent's environment if needed:"
+echo "export PATH=\"$JENKINS_COMPOSER_BIN_DIR:\$PATH\""
+
 echo "Installation complete. Please ensure Docker engine is installed and running separately."
 
