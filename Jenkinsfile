@@ -123,8 +123,8 @@ pipeline {
             steps {
                 script {
                     def zapCmd = env.BRANCH_NAME == 'prod' ?
-                        "docker run --rm -v \$PWD:/zap/wrk -t owasp/zap2docker-stable zap-baseline.py -t http://localhost:${env.DEPLOY_PORT} -g gen.conf -r zap_report.html -J -w 2" :
-                        "docker run --rm -v \$PWD:/zap/wrk -t owasp/zap2docker-stable zap-baseline.py -t http://localhost:${env.DEPLOY_PORT} -g gen.conf -r zap_report.html || exit 1"
+                        "docker run --rm -v \$PWD:/zap/wrk -t zaproxy/zap-stable zap-baseline.py -t http://localhost:${env.DEPLOY_PORT} -g gen.conf -r zap_report.html -J -w 2" :
+                        "docker run --rm -v \$PWD:/zap/wrk -t zaproxy/zap-stable zap-baseline.py -t http://localhost:${env.DEPLOY_PORT} -g gen.conf -r zap_report.html || exit 1"
                     sh zapCmd
                 }
                 archiveArtifacts artifacts: 'zap_report.html', allowEmptyArchive: true
