@@ -119,6 +119,21 @@ pipeline {
             }
         }
 
+        stage('Health Check') {
+            steps {
+                script {
+                    // Use the same Docker network your service runs on
+                    def network = env.DEPLOY_NETWORK ?: 'uat_net'
+                    def targetHost = 'dvwa'       // service or container name
+                    def targetPort = '80'          // internal container port
+
+                    sh """
+                        docker run --rm --network ${network} curlimages/curl:latest -s -o /dev/null -w '%{http_code}' http://${targetHost}:${targetPort}/health || exit 1
+                    """
+                }
+            }
+    }
+
         stage('DAST') {
             steps {
                 script {
