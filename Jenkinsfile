@@ -47,7 +47,7 @@ pipeline {
 
                         semgrep --config=auto . --output semgrep-report.sarif
                     '''
-                    archiveArtifacts 'semgrep-report.sarif'
+                    archiveArtifacts 'vulnerabilities/api/semgrep-report.sarif'
                 }
             }
         }
