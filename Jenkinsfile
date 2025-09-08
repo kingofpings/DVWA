@@ -6,6 +6,7 @@ pipeline {
         DOCKER_CREDENTIALS_ID = 'dockerRegistry'
         DEPLOY_PORT = '8081'
         DEPLOY_NETWORK = 'uat_net'
+        SONAR_HOST_URL = 'http://192.168.146.133:9000'
     }
 
     options {
