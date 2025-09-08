@@ -122,9 +122,11 @@ pipeline {
         stage('DAST') {
             steps {
                 script {
+                    def targetHost = 'dvwa'  // Docker service/container name reachable on the deploy network
+                    def targetUrl = "http://${targetHost}:${env.DEPLOY_PORT}"
                     def zapCmd = env.BRANCH_NAME == 'prod' ?
-                        "docker run --rm -v \$PWD:/zap/wrk -t zaproxy/zap-stable zap-baseline.py -t http://localhost:${env.DEPLOY_PORT} -g gen.conf -r zap_report.html -J -w 2" :
-                        "docker run --rm -v \$PWD:/zap/wrk -t zaproxy/zap-stable zap-baseline.py -t http://localhost:${env.DEPLOY_PORT} -g gen.conf -r zap_report.html || exit 1"
+                        "docker run --rm -v \$PWD:/zap/wrk --network ${env.DEPLOY_NETWORK} -t zaproxy/zap-stable zap-baseline.py -t ${targetUrl} -g gen.conf -r zap_report.html -J -w 2" :
+                        "docker run --rm -v \$PWD:/zap/wrk --network ${env.DEPLOY_NETWORK} -t zaproxy/zap-stable zap-baseline.py -t ${targetUrl} -g gen.conf -r zap_report.html || exit 1"
                     sh zapCmd
                 }
                 archiveArtifacts artifacts: 'zap_report.html', allowEmptyArchive: true
