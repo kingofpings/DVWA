@@ -149,6 +149,7 @@ pipeline {
         always {
             script {
                 sh 'docker-compose down || true'
+                sh 'docker network rm ${env.DEPLOY_NETWORK} -f || true'
             }
         }
         success { echo "Pipeline completed successfully" }
