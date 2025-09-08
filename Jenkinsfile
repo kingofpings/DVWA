@@ -6,7 +6,6 @@ pipeline {
         DOCKER_CREDENTIALS_ID = 'dockerRegistry'
         DEPLOY_PORT = '8081'
         DEPLOY_NETWORK = 'uat_net'
-        SONAR_HOST_URL = 'http://192.168.146.133:9000'
     }
 
     options {
@@ -61,9 +60,7 @@ pipeline {
                 withSonarQubeEnv('sonar-scanner') {  // must match SonarQube server config name in Jenkins
                     sh '''
                         $SCANNER_HOME/bin/sonar-scanner \
-                        -Dsonar.projectKey=dvwa \
-                        -Dsonar.sources=vulnerabilities/api \
-                        -Dsonar.host.url=$SONAR_HOST_URL
+                        -Dsonar.sources=vulnerabilities/api
                     '''
                 }
             }
