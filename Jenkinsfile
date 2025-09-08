@@ -54,10 +54,10 @@ pipeline {
 
         stage('SonarQube Analysis') {
             environment {
-                SCANNER_HOME = tool 'SonarQube_Scanner'  // must match Jenkins Global Tool Configuration
+                SCANNER_HOME = tool 'SonarScanner'  // must match Jenkins Global Tool Configuration
             }
             steps {
-                withSonarQubeEnv('sonar-scanner') {  // must match SonarQube server config name in Jenkins
+                withSonarQubeEnv() {  // must match SonarQube server config name in Jenkins
                     sh '''
                         $SCANNER_HOME/bin/sonar-scanner \
                         -Dsonar.sources=vulnerabilities/api
