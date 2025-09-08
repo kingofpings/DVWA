@@ -43,7 +43,7 @@ pipeline {
                 script {
                     sh '''
                         cd vulnerabilities/api
-                        composer install --no-interaction --no-progress --no-suggest --prefer-dist
+                        composer install --no-interaction --no-progress --prefer-dist
 
                         semgrep --config=auto . --output semgrep-report.sarif
                     '''
