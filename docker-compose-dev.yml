@@ -12,8 +12,8 @@ services:
       - db
     networks:
       - uat_net
-    volumes:
-      - ./vulnerabilities/api:/var/www/html
+    # volumes:
+    #   - ./vulnerabilities/api:/var/www/html
     restart: unless-stopped
   db:
     image: docker.io/library/mariadb:10

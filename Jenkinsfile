@@ -132,7 +132,7 @@ pipeline {
                     """
                 }
             }
-    }
+        }
 
         stage('DAST') {
             steps {
