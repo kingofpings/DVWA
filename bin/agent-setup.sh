@@ -74,10 +74,11 @@ sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-
 sudo chmod +x /usr/local/bin/docker-compose
 sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
 
-echo "Creating Jenkins user (no password)..."
+echo "Creating Jenkins user (locked password)..."
 if ! id -u jenkins >/dev/null 2>&1; then
-  sudo useradd -m -s /bin/bash --disabled-password jenkins
-  echo "Created Jenkins user with no password"
+  sudo useradd -m -s /bin/bash jenkins
+  sudo passwd -l jenkins
+  echo "Created Jenkins user with locked password (no login)"
 else
   echo "Jenkins user already exists"
 fi
@@ -129,6 +130,6 @@ echo "PATH for Composer global binaries added permanently to Jenkins user's prof
 echo "Path: $JENKINS_COMPOSER_BIN_DIR"
 echo "Profile: $JENKINS_PROFILE"
 
-echo "Installation complete. Docker, Docker Compose, Jenkins user (no password), and all tools are ready."
+echo "Installation complete. Docker, Docker Compose, Jenkins user (locked password), and all tools are ready."
 echo "Jenkins user can run Docker and sudo commands without password."
 echo "Please log out and log back in or restart the system to ensure all group changes take effect."
