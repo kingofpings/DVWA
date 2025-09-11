@@ -72,7 +72,11 @@ sudo systemctl restart docker
 echo "Installing Docker Compose (latest release)..."
 sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
-sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+if [ ! -L /usr/bin/docker-compose ]; then
+  sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+else
+  echo "Symbolic link /usr/bin/docker-compose already exists"
+fi
 
 echo "Creating Jenkins user (locked password)..."
 if ! id -u jenkins >/dev/null 2>&1; then
