@@ -5,6 +5,7 @@ echo "Updating package index..."
 sudo apt-get update -y
 
 echo "Installing base dependencies..."
+sudo apt install net-tools -y
 sudo apt-get install -y \
   bash \
   curl \
@@ -26,28 +27,49 @@ sudo apt-get install -y \
   php-zip \
   php-ctype \
   unzip \
-  apt-transport-https \
   ca-certificates \
+  gnupg \
+  lsb-release \
   software-properties-common
 
-echo "Installing Docker GPG key..."
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+echo "Setting up Docker repository and GPG key..."
 
-echo "Adding Docker repository..."
-sudo add-apt-repository \
-  "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+sudo install -m 0755 -d /etc/apt/keyrings
 
-echo "Updating package index (with Docker)..."
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+  sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+echo "Updating package index (with Docker repo)..."
 sudo apt-get update -y
 
 echo "Installing Docker Engine..."
-sudo apt-get install -y docker-ce
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
+echo "Configuring Docker daemon with insecure registries..."
+sudo mkdir -p /etc/docker
+cat <<EOF | sudo tee /etc/docker/daemon.json
+{
+    "insecure-registries": ["192.168.146.133:5000"],
+    "registry-mirrors": ["http://192.168.146.133:5000"]
+}
+EOF
 
 echo "Starting and enabling Docker service..."
+sudo systemctl daemon-reload
 sudo systemctl start docker
 sudo systemctl enable docker
 
-echo "Installing Docker Compose (latest recommended release)..."
+echo "Restarting Docker to apply daemon configuration..."
+sudo systemctl restart docker
+
+echo "Installing Docker Compose (latest release)..."
 sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
 sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
@@ -107,6 +129,6 @@ echo "PATH for Composer global binaries added permanently to Jenkins user's prof
 echo "Path: $JENKINS_COMPOSER_BIN_DIR"
 echo "Profile: $JENKINS_PROFILE"
 
-echo "Installation complete. Docker, Docker Compose, Jenkins user (no password), and all developer tools are ready."
+echo "Installation complete. Docker, Docker Compose, Jenkins user (no password), and all tools are ready."
 echo "Jenkins user can run Docker and sudo commands without password."
-echo "Please log out and log back in or restart the system to apply group changes for the Jenkins user."
+echo "Please log out and log back in or restart the system to ensure all group changes take effect."
