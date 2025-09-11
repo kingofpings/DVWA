@@ -10,6 +10,7 @@ sudo apt-get install -y \
   bash \
   curl \
   git \
+  openssh-server \
   openssh-client \
   python3 \
   python3-pip \
@@ -32,6 +33,10 @@ sudo apt-get install -y \
   lsb-release \
   software-properties-common
 
+echo "Starting and enabling SSH service..."
+sudo systemctl start ssh
+sudo systemctl enable ssh
+
 echo "Setting up Docker repository and GPG key..."
 
 sudo install -m 0755 -d /etc/apt/keyrings
@@ -39,6 +44,10 @@ sudo install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
   sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 
+if [ ! -f /etc/apt/keyrings/docker.gpg ]; then
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+    sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+fi
 sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
 echo \
