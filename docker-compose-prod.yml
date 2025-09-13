@@ -8,6 +8,8 @@ services:
       - ENV=production
       - DEBUG=true
       - DB_SERVER=db
+      - DISABLE_AUTHENTICATION=true
+      - DEFAULT_SECURITY_LEVEL=low
     depends_on:
       - db
     networks:
