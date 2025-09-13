@@ -226,13 +226,15 @@ pipeline {
 
                     // Run ZAP baseline scan with authentication; adjust command per your ZAP auth method
                     sh """
-                    docker run --rm -v \$PWD:/zap/wrk --network ${env.DEPLOY_NETWORK} -t ghcr.io/zaproxy/zaproxy:stable \
+                    mkdir -p zap-work
+                    chmod 777 zap-work
+                    docker run --rm -v \$PWD/zap-work:/zap/wrk --network ${env.DEPLOY_NETWORK} -t ghcr.io/zaproxy/zaproxy:stable \
                         zap-baseline.py -t ${targetUrl} -g gen.conf -r zap_report.html \
                         -J zap_report.json -w zap_report.md -x zap_report.xml 2 || true
                     """
                 }
                 }
-                archiveArtifacts artifacts: 'zap_report.html,zap_report.json,zap_report.md,zap_report.xml', allowEmptyArchive: true
+                archiveArtifacts artifacts: 'zap-work/zap_report.html,zap-work/zap_report.json,zap-work/zap_report.md,zap-work/zap_report.xml', allowEmptyArchive: true
             }
         }
 
@@ -255,7 +257,7 @@ pipeline {
         stage('Publish ZAP Reports') {
             steps {
                 publishHTML([
-                    reportDir: '.',
+                    reportDir: 'zap-work',
                     reportFiles: 'zap_report.html',
                     reportName: 'ZAP Report',
                     keepAll: true,
