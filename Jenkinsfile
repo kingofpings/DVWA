@@ -137,7 +137,7 @@ pipeline {
                     def targetPort = '80'          // internal container port
 
                     sh """
-                        docker run --rm --network ${network} curlimages/curl:latest -s -o /dev/null -w '%{http_code}' http://${targetHost}:${targetPort}/health || exit 1
+                        docker run --rm --network ${network} curlimages/curl:latest -s -o /dev/null -w '%{http_code}' http://${targetHost} || exit 1
                     """
                 }
             }
@@ -149,8 +149,8 @@ pipeline {
                     script {
                         def targetHost = 'dvwa'
                         def targetPort = env.DEPLOY_PORT ?: '8081'
-                        def loginUrl = "http://${targetHost}:${targetPort}/login.php"
-                        def setupUrl = "http://${targetHost}:${targetPort}/setup.php"
+                        def loginUrl = "http://${targetHost}/login.php"
+                        def setupUrl = "http://${targetHost}/setup.php"
 
                         sh """
                         docker run --rm --network ${env.DEPLOY_NETWORK} curlimages/curl:latest \\
@@ -160,7 +160,7 @@ pipeline {
 
                         docker run --rm --network ${env.DEPLOY_NETWORK} curlimages/curl:latest \\
                             --location --cookie dvwa_cookie.txt --cookie-jar dvwa_cookie.txt \\
-                            --data "username=${DVWA_USER}&password=${DVWA_PASS}&Login=Login&user_token=\${CSRF}" --output login2.html --silent "${loginUrl}"
+                            --data "username=$DVWA_USER&password=$DVWA_PASS&Login=Login&user_token=\${CSRF}" --output login2.html --silent "${loginUrl}"
 
                         docker run --rm --network ${env.DEPLOY_NETWORK} curlimages/curl:latest \\
                             --location --cookie dvwa_cookie.txt --output setup.html --silent "${setupUrl}"
@@ -182,7 +182,7 @@ pipeline {
                     sh """
                     docker run --rm -v \$PWD:/zap/wrk --network ${env.DEPLOY_NETWORK} -t ghcr.io/zaproxy/zaproxy:stable \
                         zap-baseline.py -t ${targetUrl} -g gen.conf -r zap_report.html \
-                        --auth-type basic --auth-username ${DVWA_USER} --auth-password ${DVWA_PASS} || true
+                        --auth-type basic --auth-username $DVWA_USER --auth-password $DVWA_PASS || true
                     """
                 }
                 }
