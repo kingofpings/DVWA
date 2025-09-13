@@ -119,26 +119,38 @@ pipeline {
                                 -t ${env.IMAGE_NAME} \
                                 -t ${env.IMAGE_NAME_BRANCH} .
                         """
-                        sh 'pwd'
-                        sh 'ls -ltr'
-                        sh 'mkdir -p docker-images'
-                        sh 'chmod 777 docker-images'
-                        // JSON report
-                        sh """
-                            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v docker-images:/project \
-                            aquasec/trivy image --severity CRITICAL -f json -o /project/trivy-image-report.json ${env.IMAGE_NAME} || true
-                        """
-                        // HTML report
-                        sh """
-                            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v docker-images:/project \
-                            aquasec/trivy image --severity CRITICAL --format template --template "@contrib/html.tpl" -o /project/trivy-image-report.html ${env.IMAGE_NAME} || true
-                        """
-                        sh 'ls -ltr'
+                    }
+                }
+                archiveArtifacts artifacts: 'trivy-image-report.json,trivy-image-report.html', allowEmptyArchive: true
+            }
+        }
+
+        stage('Trivy Image Scan') {
+            steps {
+                script {
+                    // JSON report
+                    sh """
+                        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $PWD:/project -w /project \
+                        aquasec/trivy image --severity CRITICAL -f json -o trivy-image-report.json ${env.IMAGE_NAME}
+
+                    """
+                    // HTML report
+                    sh """
+                        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $PWD:/project -w /project \
+                        aquasec/trivy image --severity CRITICAL --format template --template "@contrib/html.tpl" -o trivy-image-report.html ${env.IMAGE_NAME}
+                    """
+                }
+            }
+        }
+
+        stage ('Docker Push') {
+            steps {
+                script {
+                    docker.withRegistry("http://${env.REGISTRY_URL}", env.DOCKER_CREDENTIALS_ID) {
                         sh "docker push ${env.IMAGE_NAME}"
                         sh "docker push ${env.IMAGE_NAME_BRANCH}"
                     }
                 }
-                archiveArtifacts artifacts: 'docker-images/trivy-image-report.json,docker-images/trivy-image-report.html', allowEmptyArchive: true
             }
         }
 
