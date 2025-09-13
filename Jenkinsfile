@@ -93,17 +93,25 @@ pipeline {
                         echo "Skipping SCA scan: composer.lock not found"
                     }
                 }
-                archiveArtifacts artifacts: 'trivy-report.json,trivy-report.html', allowEmptyArchive: true
+                archiveArtifacts artifacts: 'trivy-report.json, trivy-report.html', allowEmptyArchive: true
             }
         }
 
-        stage('Publish Trivy JSON Report') {
+        stage('Publish Trivy FS Reports') {
             steps {
                 recordIssues(
                     enabledForFailure: true,
                     publishAllIssues: true,
                     tool: trivy(pattern: 'trivy-report.json')
                 )
+                publishHTML([
+                    reportDir: '.',
+                    reportFiles: 'trivy-report.html',
+                    reportName: 'Trivy FS Report',
+                    keepAll: true,
+                    alwaysLinkToLastBuild: false,
+                    allowMissing: true
+                ])
             }
         }
 
@@ -140,7 +148,7 @@ pipeline {
                         aquasec/trivy image --severity CRITICAL --format template --template trivy-html.tpl -o trivy-image-report.html ${env.IMAGE_NAME}
                     """
                 }
-                archiveArtifacts artifacts: 'trivy-image-report.json,trivy-image-report.html', allowEmptyArchive: true
+                archiveArtifacts artifacts: 'trivy-image-report.json, trivy-image-report.html', allowEmptyArchive: true
             }
         }
 
@@ -157,8 +165,13 @@ pipeline {
 
         stage('Publish Docker Image Reports') {
             steps {
+                recordIssues(
+                    enabledForFailure: true,
+                    publishAllIssues: true,
+                    tool: trivy(pattern: 'trivy-image-report.json')
+                )
                 publishHTML([
-                    reportDir: 'docker-images',
+                    reportDir: '.',
                     reportFiles: 'trivy-image-report.html',
                     reportName: 'Trivy Image Report',
                     keepAll: true,
