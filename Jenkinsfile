@@ -48,8 +48,17 @@ pipeline {
                         semgrep --config=auto . --output semgrep-report.sarif
                     '''
                     archiveArtifacts 'vulnerabilities/api/semgrep-report.sarif'
+                    junit 'vulnerabilities/api/test-results.xml', allowEmptyResults: true
                 }
             }
+        }
+        stage('Publish SARIF Report') {
+        steps {
+                recordIssues(
+                enabledForFailure: true,
+                tool: sarif(pattern: 'vulnerabilities/api/semgrep-report.sarif')
+            )
+        }
         }
 
         stage('SonarQube Analysis') {
@@ -140,8 +149,8 @@ pipeline {
                     def targetHost = 'dvwa'  // Docker service/container name reachable on the deploy network
                     def targetUrl = "http://${targetHost}:${env.DEPLOY_PORT}"
                     def zapCmd = env.BRANCH_NAME == 'prod' ?
-                        "docker run --rm -v \$PWD:/zap/wrk --network ${env.DEPLOY_NETWORK} -t zaproxy/zap-stable zap-baseline.py -t ${targetUrl} -g gen.conf -r zap_report.html -J -w 2" :
-                        "docker run --rm -v \$PWD:/zap/wrk --network ${env.DEPLOY_NETWORK} -t zaproxy/zap-stable zap-baseline.py -t ${targetUrl} -g gen.conf -r zap_report.html || exit 1"
+                        "docker run --rm -v \$PWD:/zap/wrk --network ${env.DEPLOY_NETWORK} -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t ${targetUrl} -g gen.conf -r zap_report.html -J -w 2" :
+                        "docker run --rm -v \$PWD:/zap/wrk --network ${env.DEPLOY_NETWORK} -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t ${targetUrl} -g gen.conf -r zap_report.html || exit 1"
                     sh zapCmd
                 }
                 archiveArtifacts artifacts: 'zap_report.html', allowEmptyArchive: true
@@ -167,6 +176,11 @@ pipeline {
             script {
                 sh 'docker-compose down || true'
                 sh 'docker network rm ${env.DEPLOY_NETWORK} -f || true'
+                sh 'docker image rm ${env.IMAGE_NAME} ${env.IMAGE_NAME_BRANCH} || true'
+                sh 'docker system prune -f || true'
+                sh 'docker volume rm ${env.DEPLOY_VOLUME} -f || true'
+                junit 'test-results.xml', allowEmptyResults: true
+                cleanWs()
             }
         }
         success { echo "Pipeline completed successfully" }
