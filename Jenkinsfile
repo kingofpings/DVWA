@@ -79,14 +79,35 @@ pipeline {
             steps {
                 script {
                     if (fileExists('vulnerabilities/api/composer.lock')) {
-                        sh 'trivy fs vulnerabilities/api --severity CRITICAL --exit-code 1 || true'
+                        // JSON report
+                        sh '''
+                            docker run --rm -v $PWD:/project -w /project aquasec/trivy fs vulnerabilities/api \
+                            --severity CRITICAL --format json --output trivy-report.json || true
+                        '''
+                        // XML report
+                        sh '''
+                            docker run --rm -v $PWD:/project -w /project aquasec/trivy fs vulnerabilities/api \
+                            --severity CRITICAL --format template --template "@/contrib/html.tpl" --output trivy-report.html || true
+                        '''
                     } else {
                         echo "Skipping SCA scan: composer.lock not found"
                     }
                 }
-                archiveArtifacts artifacts: 'trivy-report.json', allowEmptyArchive: true
+                archiveArtifacts artifacts: 'trivy-report.json,trivy-report.html', allowEmptyArchive: true
             }
         }
+
+        stage('Publish Trivy JSON Report') {
+            steps {
+                recordIssues(
+                    enabledForFailure: true,
+                    allowEmptyResults: true,
+                    tool: trivy(pattern: 'trivy-report.json')
+                )
+            }
+        }
+
+        
 
         stage('Docker Build and Push') {
             steps {
@@ -100,11 +121,34 @@ pipeline {
                                 -t ${env.IMAGE_NAME} \
                                 -t ${env.IMAGE_NAME_BRANCH} .
                         """
-                        sh "trivy image --severity CRITICAL --exit-code 1 ${env.IMAGE_NAME} || true"
+                        // JSON report
+                        sh """
+                            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $PWD:/project -w /project \
+                            aquasec/trivy image --severity CRITICAL --format json --output trivy-image-report.json ${env.IMAGE_NAME} || true
+                        """
+                        // XML report
+                        sh """
+                            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $PWD:/project -w /project \
+                            aquasec/trivy image --severity CRITICAL --format template --template "@/contrib/html.tpl" --output trivy-image-report.html ${env.IMAGE_NAME} || true
+                        """
                         sh "docker push ${env.IMAGE_NAME}"
                         sh "docker push ${env.IMAGE_NAME_BRANCH}"
                     }
                 }
+                archiveArtifacts artifacts: 'trivy-image-report.json,trivy-image-report.html', allowEmptyArchive: true
+            }
+        }
+
+        stage('Publish Docker Image Reports') {
+            steps {
+                publishHTML([
+                    reportDir: '.',
+                    reportFiles: 'trivy-image-report.html',
+                    reportName: 'Trivy Image Report',
+                    keepAll: true,
+                    alwaysLinkToLastBuild: false,
+                    allowMissing: true
+                ])
             }
         }
 
@@ -189,6 +233,7 @@ pipeline {
                 }
                 }
                 archiveArtifacts artifacts: 'zap_report.html,zap_report.json,zap_report.md,zap_report.xml', allowEmptyArchive: true
+                junit 'zap_report.xml', allowEmptyResults: true
             }
         }
 
@@ -208,7 +253,7 @@ pipeline {
         //     }
         // }
 
-        stage('Publish Reports') {
+        stage('Publish ZAP Reports') {
             steps {
                 publishHTML([
                     reportDir: '.',
@@ -230,7 +275,6 @@ pipeline {
                 sh 'docker image rm ${env.IMAGE_NAME} ${env.IMAGE_NAME_BRANCH} || true'
                 sh 'docker system prune -f || true'
                 sh 'docker volume rm ${env.DEPLOY_VOLUME} -f || true'
-                junit 'zap_report.xml', allowEmptyResults: true
                 cleanWs()
             }
         }
