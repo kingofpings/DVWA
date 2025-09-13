@@ -55,9 +55,9 @@ pipeline {
         stage('Publish SARIF Report') {
         steps {
                 recordIssues(
-                enabledForFailure: true,
-                allowEmptyResults: true,
-                tool: sarif(pattern: 'vulnerabilities/api/semgrep-report.sarif')
+                    enabledForFailure: true,
+                    publishAllIssues: true,
+                    tool: sarif(pattern: 'vulnerabilities/api/semgrep-report.sarif')
                 )
             }
         }
