@@ -44,8 +44,8 @@ pipeline {
                     sh '''
                         cd vulnerabilities/api
                         composer install --no-interaction --no-progress --prefer-dist
+                        docker run --rm -v $PWD:/src -w /src returntocorp/semgrep semgrep --config=auto . --json --output=semgrep-report.sarif
 
-                        semgrep --config=auto . --output semgrep-report.sarif
                     '''
                     archiveArtifacts 'vulnerabilities/api/semgrep-report.sarif'
                     junit 'vulnerabilities/api/test-results.xml', allowEmptyResults: true
@@ -55,10 +55,10 @@ pipeline {
         stage('Publish SARIF Report') {
         steps {
                 recordIssues(
-                enabledForFailure: true,
-                tool: sarif(pattern: 'vulnerabilities/api/semgrep-report.sarif')
-            )
-        }
+                    enabledForFailure: true,
+                    tool: sarif(pattern: 'vulnerabilities/api/semgrep-report.sarif')
+                )
+            }
         }
 
         stage('SonarQube Analysis') {
