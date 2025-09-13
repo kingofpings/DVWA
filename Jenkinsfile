@@ -81,12 +81,12 @@ pipeline {
                     if (fileExists('vulnerabilities/api/composer.lock')) {
                         // JSON report
                         sh '''
-                            docker run --rm -v $PWD:/project -w /project aquasec/trivy fs . \
+                            docker run --rm aquasec/trivy fs . \
                             --severity CRITICAL --format json --output trivy-report.json || true
                         '''
                         // HTML report
                         sh '''
-                            docker run --rm -v $PWD:/project -w /project aquasec/trivy fs . \
+                            docker run --rm aquasec/trivy fs . \
                             --severity CRITICAL --format template --template "@/contrib/html.tpl" --output trivy-report.html || true
                         '''
                     } else {
@@ -192,33 +192,6 @@ pipeline {
             }
         }
 
-        // stage('DVWA Setup Authenticated') {
-        //     steps {
-        //         withCredentials([usernamePassword(credentialsId: 'DVWA_SETUP_CREDENTIALS', usernameVariable: 'DVWA_USER', passwordVariable: 'DVWA_PASS')]) {
-        //             script {
-        //                 def targetHost = 'dvwa'
-        //                 def targetPort = env.DEPLOY_PORT ?: '8081'
-        //                 def loginUrl = "http://${targetHost}/login.php"
-        //                 def setupUrl = "http://${targetHost}/setup.php"
-
-        //                 sh """
-        //                 docker run --rm --network ${env.DEPLOY_NETWORK} curlimages/curl:latest \\
-        //                     --location --cookie-jar dvwa_cookie.txt --output login.html --silent "${loginUrl}"
-
-        //                 CSRF=\$(grep 'user_token' login.html | sed -n 's/.*value="\\(.*\\)".*/\\1/p')
-
-        //                 docker run --rm --network ${env.DEPLOY_NETWORK} curlimages/curl:latest \\
-        //                     --location --cookie dvwa_cookie.txt --cookie-jar dvwa_cookie.txt \\
-        //                     --data "username=$DVWA_USER&password=$DVWA_PASS&Login=Login&user_token=\${CSRF}" --output login2.html --silent "${loginUrl}"
-
-        //                 docker run --rm --network ${env.DEPLOY_NETWORK} curlimages/curl:latest \\
-        //                     --location --cookie dvwa_cookie.txt --output setup.html --silent "${setupUrl}"
-        //                 """
-        //             }
-        //         }
-        //     }
-        // }
-
         stage('DAST with ZAP') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'DVWA_CREDENTIALS', usernameVariable: 'DVWA_USER', passwordVariable: 'DVWA_PASS')]) {
@@ -267,7 +240,7 @@ pipeline {
                     alwaysLinkToLastBuild: false,
                     allowMissing: true
                 ])
-                junit allowEmptyResults: true, testResults: 'zap_report.xml'
+                junit allowEmptyResults: true, testResults: 'zap-work/zap_report.xml'
             }
         }
     }
