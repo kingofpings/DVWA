@@ -87,7 +87,7 @@ pipeline {
                         // HTML report
                         sh '''
                             docker run --rm -v $PWD:/project -w /project aquasec/trivy fs . \
-                            --severity CRITICAL --format template --template "@project/trivy-html.tpl" --output trivy-report.html
+                            --severity CRITICAL --format template --template trivy-html.tpl --output trivy-report.html
                         '''
                     } else {
                         echo "Skipping SCA scan: composer.lock not found"
@@ -137,7 +137,7 @@ pipeline {
                     // HTML report
                     sh """
                         docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $PWD:/project -w /project \
-                        aquasec/trivy image --severity CRITICAL --format template --template "@project/trivy-html.tpl" -o trivy-image-report.html ${env.IMAGE_NAME}
+                        aquasec/trivy image --severity CRITICAL --format template --template trivy-html.tpl -o trivy-image-report.html ${env.IMAGE_NAME}
                     """
                 }
                 archiveArtifacts artifacts: 'trivy-image-report.json,trivy-image-report.html', allowEmptyArchive: true
