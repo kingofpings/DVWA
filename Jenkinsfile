@@ -80,15 +80,17 @@ pipeline {
                 script {
                     if (fileExists('vulnerabilities/api/composer.lock')) {
                         // JSON report
-                        sh '''
+                        sh """
                             docker run --rm aquasec/trivy fs . \
                             --severity CRITICAL --format json --output trivy-report.json
-                        '''
+                        """
                         // HTML report
-                        sh '''
+                        sh """
                             docker run --rm -v $PWD:/project -w /project aquasec/trivy fs . \
                             --severity CRITICAL --format template --template trivy-html.tpl --output trivy-report.html
-                        '''
+                            chmod -R u+rwX $PWD
+
+                        """
                     } else {
                         echo "Skipping SCA scan: composer.lock not found"
                     }
@@ -146,6 +148,7 @@ pipeline {
                     sh """
                         docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $PWD:/project -w /project \
                         aquasec/trivy image --severity CRITICAL --format template --template trivy-html.tpl -o trivy-image-report.html ${env.IMAGE_NAME}
+                        chmod -R u+rwX $PWD
                     """
                 }
                 archiveArtifacts artifacts: 'trivy-image-report.json, trivy-image-report.html', allowEmptyArchive: true
@@ -233,6 +236,7 @@ pipeline {
                     docker run --rm -v \$PWD/zap-work:/zap/wrk --network ${env.DEPLOY_NETWORK} -t ghcr.io/zaproxy/zaproxy:stable \
                         zap-baseline.py -t ${targetUrl} -g gen.conf -r zap_report.html \
                         -J zap_report.json -w zap_report.md -x zap_report.xml 2 || true
+                    chmod -R u+rwX $PWD
                     """
                 }
                 }
