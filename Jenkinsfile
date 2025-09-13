@@ -121,29 +121,31 @@ pipeline {
                         """
                         sh 'pwd'
                         sh 'ls -ltr'
+                        sh 'mkdir -p docker-images'
+                        sh 'chmod 777 docker-images'
                         // JSON report
                         sh """
-                            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock  \
-                            aquasec/trivy image --severity CRITICAL -f json -o trivy-image-report.json ${env.IMAGE_NAME} || true
+                            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v docker-images:/project \
+                            aquasec/trivy image --severity CRITICAL -f json -o /project/trivy-image-report.json ${env.IMAGE_NAME} || true
                         """
                         // HTML report
                         sh """
-                            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-                            aquasec/trivy image --severity CRITICAL --format template --template "@contrib/html.tpl" -o trivy-image-report.html ${env.IMAGE_NAME} || true
+                            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v docker-images:/project \
+                            aquasec/trivy image --severity CRITICAL --format template --template "@contrib/html.tpl" -o /project/trivy-image-report.html ${env.IMAGE_NAME} || true
                         """
                         sh 'ls -ltr'
                         sh "docker push ${env.IMAGE_NAME}"
                         sh "docker push ${env.IMAGE_NAME_BRANCH}"
                     }
                 }
-                archiveArtifacts artifacts: 'trivy-image-report.json,trivy-image-report.html', allowEmptyArchive: true
+                archiveArtifacts artifacts: 'docker-images/trivy-image-report.json,docker-images/trivy-image-report.html', allowEmptyArchive: true
             }
         }
 
         stage('Publish Docker Image Reports') {
             steps {
                 publishHTML([
-                    reportDir: '.',
+                    reportDir: 'docker-images',
                     reportFiles: 'trivy-image-report.html',
                     reportName: 'Trivy Image Report',
                     keepAll: true,
@@ -211,22 +213,6 @@ pipeline {
                 archiveArtifacts artifacts: 'zap-work/zap_report.html,zap-work/zap_report.json,zap-work/zap_report.md,zap-work/zap_report.xml', allowEmptyArchive: true
             }
         }
-
-
-
-        // stage('DAST') {
-        //     steps {
-        //         script {
-        //             def targetHost = 'dvwa'  // Docker service/container name reachable on the deploy network
-        //             def targetUrl = "http://${targetHost}:${env.DEPLOY_PORT}"
-        //             def zapCmd = env.BRANCH_NAME == 'prod' ?
-        //                 "docker run --rm -v \$PWD:/zap/wrk --network ${env.DEPLOY_NETWORK} -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t ${targetUrl} -g gen.conf -r zap_report.html -J -w 2" :
-        //                 "docker run --rm -v \$PWD:/zap/wrk --network ${env.DEPLOY_NETWORK} -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t ${targetUrl} -g gen.conf -r zap_report.html || exit 1"
-        //             sh zapCmd
-        //         }
-        //         archiveArtifacts artifacts: 'zap_report.html', allowEmptyArchive: true
-        //     }
-        // }
 
         stage('Publish ZAP Reports') {
             steps {
