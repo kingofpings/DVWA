@@ -45,7 +45,7 @@ pipeline {
                         cd vulnerabilities/api
                         composer install --no-interaction --no-progress --prefer-dist
                         docker run --rm -v $PWD:/src -w /src returntocorp/semgrep semgrep --config=auto . --json --output=semgrep-report.sarif
-
+                        curl -o trivy-html.tpl https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
                     '''
                     archiveArtifacts 'vulnerabilities/api/semgrep-report.sarif'
                 }
@@ -82,12 +82,12 @@ pipeline {
                         // JSON report
                         sh '''
                             docker run --rm aquasec/trivy fs . \
-                            --severity CRITICAL --format json --output trivy-report.json || true
+                            --severity CRITICAL --format json --output trivy-report.json
                         '''
                         // HTML report
                         sh '''
-                            docker run --rm aquasec/trivy fs . \
-                            --severity CRITICAL --format template --template "/etc/trivy/contrib/html.tpl" --output trivy-report.html || true
+                            docker run --rm -v $PWD:/project -w /project aquasec/trivy fs . \
+                            --severity CRITICAL --format template --template "@project/trivy-html.tpl" --output trivy-report.html
                         '''
                     } else {
                         echo "Skipping SCA scan: composer.lock not found"
@@ -121,7 +121,7 @@ pipeline {
                         """
                     }
                 }
-                archiveArtifacts artifacts: 'trivy-image-report.json,trivy-image-report.html', allowEmptyArchive: true
+                
             }
         }
 
@@ -137,9 +137,10 @@ pipeline {
                     // HTML report
                     sh """
                         docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $PWD:/project -w /project \
-                        aquasec/trivy image --severity CRITICAL --format template --template "/etc/trivy/contrib/html.tpl" -o trivy-image-report.html ${env.IMAGE_NAME}
+                        aquasec/trivy image --severity CRITICAL --format template --template "@project/trivy-html.tpl" -o trivy-image-report.html ${env.IMAGE_NAME}
                     """
                 }
+                archiveArtifacts artifacts: 'trivy-image-report.json,trivy-image-report.html', allowEmptyArchive: true
             }
         }
 
