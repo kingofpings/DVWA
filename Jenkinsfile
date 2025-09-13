@@ -81,12 +81,12 @@ pipeline {
                     if (fileExists('vulnerabilities/api/composer.lock')) {
                         // JSON report
                         sh '''
-                            docker run --rm -v $PWD:/project -w /project aquasec/trivy fs vulnerabilities/api \
+                            docker run --rm -v $PWD:/project -w /project aquasec/trivy fs . \
                             --severity CRITICAL --format json --output trivy-report.json || true
                         '''
-                        // XML report
+                        // HTML report
                         sh '''
-                            docker run --rm -v $PWD:/project -w /project aquasec/trivy fs vulnerabilities/api \
+                            docker run --rm -v $PWD:/project -w /project aquasec/trivy fs . \
                             --severity CRITICAL --format template --template "@/contrib/html.tpl" --output trivy-report.html || true
                         '''
                     } else {
@@ -121,16 +121,19 @@ pipeline {
                                 -t ${env.IMAGE_NAME} \
                                 -t ${env.IMAGE_NAME_BRANCH} .
                         """
+                        sh 'pwd'
+                        sh 'ls -ltr'
                         // JSON report
                         sh """
-                            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $PWD:/project -w /project \
-                            aquasec/trivy image --severity CRITICAL --format json --output trivy-image-report.json ${env.IMAGE_NAME} || true
+                            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock  \
+                            aquasec/trivy image --severity CRITICAL -f json -o trivy-image-report.json ${env.IMAGE_NAME} || true
                         """
-                        // XML report
+                        // HTML report
                         sh """
-                            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $PWD:/project -w /project \
-                            aquasec/trivy image --severity CRITICAL --format template --template "@/contrib/html.tpl" --output trivy-image-report.html ${env.IMAGE_NAME} || true
+                            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+                            aquasec/trivy image --severity CRITICAL --format template --template "@contrib/html.tpl" -o trivy-image-report.html ${env.IMAGE_NAME} || true
                         """
+                        sh 'ls -ltr'
                         sh "docker push ${env.IMAGE_NAME}"
                         sh "docker push ${env.IMAGE_NAME_BRANCH}"
                     }
