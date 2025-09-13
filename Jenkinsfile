@@ -42,10 +42,10 @@ pipeline {
             steps {
                 script {
                     sh '''
+                        curl -o trivy-html.tpl https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
                         cd vulnerabilities/api
                         composer install --no-interaction --no-progress --prefer-dist
                         docker run --rm -v $PWD:/src -w /src returntocorp/semgrep semgrep --config=auto . --json --output=semgrep-report.sarif
-                        curl -o trivy-html.tpl https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
                     '''
                     archiveArtifacts 'vulnerabilities/api/semgrep-report.sarif'
                 }
