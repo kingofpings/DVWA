@@ -42,6 +42,7 @@ pipeline {
             steps {
                 script {
                     sh '''
+                        whoami
                         curl -o trivy-html.tpl https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
                         cd vulnerabilities/api
                         composer install --no-interaction --no-progress --prefer-dist
