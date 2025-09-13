@@ -143,19 +143,68 @@ pipeline {
             }
         }
 
-        stage('DAST') {
+        stage('DVWA Setup Authenticated') {
             steps {
+                withCredentials([usernamePassword(credentialsId: 'DVWA_SETUP_CREDENTIALS', usernameVariable: 'DVWA_USER', passwordVariable: 'DVWA_PASS')]) {
+                    script {
+                        def targetHost = 'dvwa'
+                        def targetPort = env.DEPLOY_PORT ?: '8081'
+                        def loginUrl = "http://${targetHost}:${targetPort}/login.php"
+                        def setupUrl = "http://${targetHost}:${targetPort}/setup.php"
+
+                        sh """
+                        docker run --rm --network ${env.DEPLOY_NETWORK} curlimages/curl:latest \\
+                            --location --cookie-jar dvwa_cookie.txt --output login.html --silent "${loginUrl}"
+
+                        CSRF=\$(grep 'user_token' login.html | sed -n 's/.*value="\\(.*\\)".*/\\1/p')
+
+                        docker run --rm --network ${env.DEPLOY_NETWORK} curlimages/curl:latest \\
+                            --location --cookie dvwa_cookie.txt --cookie-jar dvwa_cookie.txt \\
+                            --data "username=${DVWA_USER}&password=${DVWA_PASS}&Login=Login&user_token=\${CSRF}" --output login2.html --silent "${loginUrl}"
+
+                        docker run --rm --network ${env.DEPLOY_NETWORK} curlimages/curl:latest \\
+                            --location --cookie dvwa_cookie.txt --output setup.html --silent "${setupUrl}"
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('DAST with ZAP') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'DVWA_CREDENTIALS', usernameVariable: 'DVWA_USER', passwordVariable: 'DVWA_PASS')]) {
                 script {
-                    def targetHost = 'dvwa'  // Docker service/container name reachable on the deploy network
-                    def targetUrl = "http://${targetHost}:${env.DEPLOY_PORT}"
-                    def zapCmd = env.BRANCH_NAME == 'prod' ?
-                        "docker run --rm -v \$PWD:/zap/wrk --network ${env.DEPLOY_NETWORK} -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t ${targetUrl} -g gen.conf -r zap_report.html -J -w 2" :
-                        "docker run --rm -v \$PWD:/zap/wrk --network ${env.DEPLOY_NETWORK} -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t ${targetUrl} -g gen.conf -r zap_report.html || exit 1"
-                    sh zapCmd
+                    def targetHost = 'dvwa'
+                    def targetPort = env.DEPLOY_PORT ?: '8081'
+                    def targetUrl = "http://${targetHost}:${targetPort}"
+
+                    // Run ZAP baseline scan with authentication; adjust command per your ZAP auth method
+                    sh """
+                    docker run --rm -v \$PWD:/zap/wrk --network ${env.DEPLOY_NETWORK} -t ghcr.io/zaproxy/zaproxy:stable \
+                        zap-baseline.py -t ${targetUrl} -g gen.conf -r zap_report.html \
+                        --auth-type basic --auth-username ${DVWA_USER} --auth-password ${DVWA_PASS} || true
+                    """
+                }
                 }
                 archiveArtifacts artifacts: 'zap_report.html', allowEmptyArchive: true
             }
         }
+
+
+
+        // stage('DAST') {
+        //     steps {
+        //         script {
+        //             def targetHost = 'dvwa'  // Docker service/container name reachable on the deploy network
+        //             def targetUrl = "http://${targetHost}:${env.DEPLOY_PORT}"
+        //             def zapCmd = env.BRANCH_NAME == 'prod' ?
+        //                 "docker run --rm -v \$PWD:/zap/wrk --network ${env.DEPLOY_NETWORK} -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t ${targetUrl} -g gen.conf -r zap_report.html -J -w 2" :
+        //                 "docker run --rm -v \$PWD:/zap/wrk --network ${env.DEPLOY_NETWORK} -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t ${targetUrl} -g gen.conf -r zap_report.html || exit 1"
+        //             sh zapCmd
+        //         }
+        //         archiveArtifacts artifacts: 'zap_report.html', allowEmptyArchive: true
+        //     }
+        // }
 
         stage('Publish Reports') {
             steps {
