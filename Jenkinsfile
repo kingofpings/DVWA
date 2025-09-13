@@ -101,7 +101,7 @@ pipeline {
             steps {
                 recordIssues(
                     enabledForFailure: true,
-                    allowEmptyResults: true,
+                    publishAllIssues: true,
                     tool: trivy(pattern: 'trivy-report.json')
                 )
             }
@@ -233,7 +233,6 @@ pipeline {
                 }
                 }
                 archiveArtifacts artifacts: 'zap_report.html,zap_report.json,zap_report.md,zap_report.xml', allowEmptyArchive: true
-                junit 'zap_report.xml', allowEmptyResults: true
             }
         }
 
@@ -263,6 +262,7 @@ pipeline {
                     alwaysLinkToLastBuild: false,
                     allowMissing: true
                 ])
+                junit allowEmptyResults: true, testResults: 'zap_report.xml'
             }
         }
     }
