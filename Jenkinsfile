@@ -48,7 +48,6 @@ pipeline {
 
                     '''
                     archiveArtifacts 'vulnerabilities/api/semgrep-report.sarif'
-                    junit 'vulnerabilities/api/test-results.xml', allowEmptyResults: true
                 }
             }
         }
