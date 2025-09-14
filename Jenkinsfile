@@ -82,15 +82,11 @@ pipeline {
                     if (fileExists('vulnerabilities/api/composer.lock')) {
                         // JSON report
                         sh """
-                            docker run --rm aquasec/trivy fs . \
-                            --severity CRITICAL --debug --format json --output trivy-report.json
+                            trivy fs . --severity CRITICAL --debug --format json --output trivy-report.json
                         """
                         // HTML report
                         sh """
-                            docker run --rm -v $PWD:/project -w /project aquasec/trivy fs . \
-                            --severity CRITICAL --debug --format template --template trivy-html.tpl --output trivy-report.html
-                            sudo chmod -R u+rwX $PWD
-                            ls -la
+                            trivy fs . --severity CRITICAL --debug --format template --template "@trivy-html.tpl" --output trivy-report.html
                         """
                     } else {
                         echo "Skipping SCA scan: composer.lock not found"
@@ -141,21 +137,14 @@ pipeline {
                 script {
                     // JSON report
                     sh """
-                        mkdir -p $PWD/reports
-                        chmod 777 $PWD/reports
-                        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --privileged -v $PWD:/project -w /project \
-                        aquasec/trivy image --severity CRITICAL --debug -f json -o reports/trivy-image-report.json ${env.IMAGE_NAME}
+                        trivy image --severity CRITICAL --debug -f json -o trivy-image-report.json ${env.IMAGE_NAME}
                     """
                     // HTML report
                     sh """
-                        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --privileged -v $PWD:/project -w /project \
-                        aquasec/trivy image --debug --severity CRITICAL --format template --template trivy-html.tpl -o reports/trivy-image-report.html ${env.IMAGE_NAME}
-                        sudo chown -R $USER:$USER $PWD
-                        ls -la
+                        trivy image --debug --severity CRITICAL --format template --template "@trivy-html.tpl" -o trivy-image-report.html ${env.IMAGE_NAME}
                     """
                 }
-                archiveArtifacts artifacts: 'reports/trivy-image-report.json', allowEmptyArchive: true
-                archiveArtifacts artifacts: 'reports/trivy-image-report.html', allowEmptyArchive: true
+                archiveArtifacts artifacts: 'trivy-image-report.json, trivy-image-report.html', allowEmptyArchive: true
             }
         }
 
