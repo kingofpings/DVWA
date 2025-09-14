@@ -82,11 +82,11 @@ pipeline {
                     if (fileExists('vulnerabilities/api/composer.lock')) {
                         // JSON report
                         sh """
-                            trivy fs . --severity CRITICAL --debug --format json --output trivy-report.json
+                            trivy fs . --skip-version-check --severity CRITICAL --format json --output trivy-report.json
                         """
                         // HTML report
                         sh """
-                            trivy fs . --severity CRITICAL --debug --format template --template "@trivy-html.tpl" --output trivy-report.html
+                            trivy fs . --skip-version-check --severity CRITICAL --format template --template "@trivy-html.tpl" --output trivy-report.html
                         """
                     } else {
                         echo "Skipping SCA scan: composer.lock not found"
@@ -137,11 +137,11 @@ pipeline {
                 script {
                     // JSON report
                     sh """
-                        trivy image --severity CRITICAL --debug -f json -o trivy-image-report.json ${env.IMAGE_NAME}
+                        trivy image --skip-version-check --severity CRITICAL -f json -o trivy-image-report.json ${env.IMAGE_NAME}
                     """
                     // HTML report
                     sh """
-                        trivy image --debug --severity CRITICAL --format template --template "@trivy-html.tpl" -o trivy-image-report.html ${env.IMAGE_NAME}
+                        trivy image --skip-version-check --severity CRITICAL --format template --template "@trivy-html.tpl" -o trivy-image-report.html ${env.IMAGE_NAME}
                     """
                 }
                 archiveArtifacts artifacts: 'trivy-image-report.json, trivy-image-report.html', allowEmptyArchive: true
