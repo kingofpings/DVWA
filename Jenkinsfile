@@ -43,6 +43,7 @@ pipeline {
                 script {
                     sh 'curl -o trivy-html.tpl https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl'
                     sh """
+                        cd $WORKSPACE/vulnerabilities/api
                         composer install --no-interaction --no-progress --prefer-dist
                         pwd
                         docker run --rm -v $WORKSPACE/vulnerabilities/api:/src -w /src returntocorp/semgrep semgrep scan --config=auto . --json --output=semgrep-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.sarif
