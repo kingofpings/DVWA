@@ -45,9 +45,9 @@ pipeline {
                         curl -o trivy-html.tpl https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
                         cd vulnerabilities/api
                         composer install --no-interaction --no-progress --prefer-dist
-                        docker run --rm -v $PWD:/src -w /src returntocorp/semgrep semgrep --config=auto . --json --output=semgrep-report.sarif
+                        docker run --rm -v $PWD:/src -w /src returntocorp/semgrep semgrep --config=auto . --json --output=semgrep-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.sarif
                     """
-                    archiveArtifacts 'vulnerabilities/api/semgrep-report.sarif'
+                    archiveArtifacts "vulnerabilities/api/semgrep-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.sarif"
                 }
             }
         }
@@ -56,7 +56,7 @@ pipeline {
                 recordIssues(
                     enabledForFailure: true,
                     publishAllIssues: true,
-                    tool: sarif(pattern: 'vulnerabilities/api/semgrep-report.sarif')
+                    tool: sarif(pattern: "vulnerabilities/api/semgrep-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.sarif")
                 )
             }
         }
@@ -81,17 +81,17 @@ pipeline {
                     if (fileExists('vulnerabilities/api/composer.lock')) {
                         // JSON report
                         sh """
-                            trivy fs . --skip-version-check --severity CRITICAL --format json --output trivy-report.json
+                            trivy fs . --skip-version-check --severity CRITICAL --format json --output trivy-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.json
                         """
                         // HTML report
                         sh """
-                            trivy fs . --skip-version-check --severity CRITICAL --format template --template "@trivy-html.tpl" --output trivy-report.html
+                            trivy fs . --skip-version-check --severity CRITICAL --format template --template "@trivy-html.tpl" --output trivy-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.html
                         """
                     } else {
                         echo "Skipping SCA scan: composer.lock not found"
                     }
                 }
-                archiveArtifacts artifacts: 'trivy-report.json, trivy-report.html', allowEmptyArchive: true
+                archiveArtifacts artifacts: "trivy-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.json, trivy-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.html", allowEmptyArchive: true
             }
         }
 
@@ -100,11 +100,11 @@ pipeline {
                 recordIssues(
                     enabledForFailure: true,
                     publishAllIssues: true,
-                    tool: trivy(pattern: 'trivy-report.json', id: 'trivy-fs')
+                    tool: trivy(pattern: "trivy-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.json", id: 'trivy-fs')
                 )
                 publishHTML([
                     reportDir: '.',
-                    reportFiles: 'trivy-report.html',
+                    reportFiles: "trivy-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.html",
                     reportName: 'Trivy FS Report',
                     keepAll: true,
                     alwaysLinkToLastBuild: true,
@@ -136,14 +136,14 @@ pipeline {
                 script {
                     // JSON report
                     sh """
-                        trivy image --skip-version-check --severity CRITICAL -f json -o trivy-image-report.json ${env.IMAGE_NAME}
+                        trivy image --skip-version-check --severity CRITICAL -f json -o trivy-image-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.json ${env.IMAGE_NAME}
                     """
                     // HTML report
                     sh """
-                        trivy image --skip-version-check --severity CRITICAL --format template --template "@trivy-html.tpl" -o trivy-image-report.html ${env.IMAGE_NAME}
+                        trivy image --skip-version-check --severity CRITICAL --format template --template "@trivy-html.tpl" -o trivy-image-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.html ${env.IMAGE_NAME}
                     """
                 }
-                archiveArtifacts artifacts: 'trivy-image-report.json, trivy-image-report.html', allowEmptyArchive: true
+                archiveArtifacts artifacts: "trivy-image-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.json, trivy-image-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.html", allowEmptyArchive: true
             }
         }
 
@@ -163,11 +163,11 @@ pipeline {
                 recordIssues(
                     enabledForFailure: true,
                     publishAllIssues: true,
-                    tool: trivy(pattern: 'trivy-image-report.json', id: 'trivy-image')
+                    tool: trivy(pattern: "trivy-image-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.json", id: 'trivy-image')
                 )
                 publishHTML([
                     reportDir: '.',
-                    reportFiles: 'trivy-image-report.html',
+                    reportFiles: "trivy-image-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.html",
                     reportName: 'Trivy Image Report',
                     keepAll: true,
                     alwaysLinkToLastBuild: true,
@@ -226,13 +226,13 @@ pipeline {
                     mkdir -p zap-work
                     chmod 777 zap-work
                     docker run --rm -v \$PWD/zap-work:/zap/wrk --network ${env.DEPLOY_NETWORK} -t ghcr.io/zaproxy/zaproxy:stable \
-                        zap-baseline.py -t ${targetUrl} -r zap_report.html \
-                        -J zap_report.json -w zap_report.md -x zap_report.xml 2 || true
+                        zap-baseline.py -t ${targetUrl} -r zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.html \
+                        -J zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.json -w zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.md -x zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.xml 2 || true
                     sudo chown -R ${env.USERID}:${env.USERID} zap-work
                     """
                 }
                 }
-                archiveArtifacts artifacts: 'zap-work/zap_report.html,zap-work/zap_report.json,zap-work/zap_report.md,zap-work/zap_report.xml', allowEmptyArchive: true
+                archiveArtifacts artifacts: "zap-work/zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.html,zap-work/zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.json,zap-work/zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.md,zap-work/zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.xml", allowEmptyArchive: true
             }
         }
 
@@ -240,13 +240,13 @@ pipeline {
             steps {
                 publishHTML([
                     reportDir: 'zap-work',
-                    reportFiles: 'zap_report.html',
+                    reportFiles: "zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.html",
                     reportName: 'ZAP Report',
                     keepAll: true,
                     alwaysLinkToLastBuild: true,
                     allowMissing: true
                 ])
-                junit allowEmptyResults: true, testResults: 'zap-work/zap_report.xml'
+                junit allowEmptyResults: true, testResults: "zap-work/zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.xml"
             }
         }
     }
