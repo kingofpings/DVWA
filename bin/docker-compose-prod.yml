@@ -1,0 +1,37 @@
+services:
+  dvwa:
+    image: 192.168.146.133:5000/dvwa:prod
+    container_name: dvwa_prod
+    ports:
+      - "8082:80"
+    environment:
+      - ENV=production
+      - DEBUG=true
+      - DB_SERVER=db
+      - DISABLE_AUTHENTICATION=true
+      - DEFAULT_SECURITY_LEVEL=low
+    depends_on:
+      - db
+    networks:
+      - prod_net
+    # volumes:
+    #   - ./vulnerabilities/api:/var/www/html
+    restart: unless-stopped
+  db:
+    image: docker.io/library/mariadb:10
+    environment:
+      - MYSQL_ROOT_PASSWORD=dvwa
+      - MYSQL_DATABASE=dvwa
+      - MYSQL_USER=dvwa
+      - MYSQL_PASSWORD=p@ssw0rd
+    volumes:
+      - dvwa:/var/lib/mysql
+    networks:
+      - prod_net
+    restart: unless-stopped
+volumes:
+  dvwa:
+
+networks:
+  prod_net:
+    external: true
