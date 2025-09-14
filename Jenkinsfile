@@ -246,6 +246,7 @@ pipeline {
                     alwaysLinkToLastBuild: false,
                     allowMissing: true
                 ])
+                junit allowEmptyResults: true, testResults: 'zap-work/zap_report.xml'
             }
         }
     }
