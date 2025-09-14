@@ -45,7 +45,7 @@ pipeline {
                         curl -o trivy-html.tpl https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
                         cd vulnerabilities/api
                         composer install --no-interaction --no-progress --prefer-dist
-                        docker run --rm -v $PWD:/src -w /src returntocorp/semgrep semgrep scan --config=auto . --json ---output=semgrep-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.sarif
+                        docker run --rm -v $PWD:/src -w /src returntocorp/semgrep semgrep scan --config=auto . --json --output=semgrep-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.sarif
                     """
                     archiveArtifacts "vulnerabilities/api/semgrep-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.sarif"
                 }
@@ -56,7 +56,7 @@ pipeline {
                 recordIssues(
                     enabledForFailure: true,
                     publishAllIssues: true,
-                    tool: sarif(pattern: "vulnerabilities/api/semgrep-report.sarif")
+                    tool: sarif(pattern: "vulnerabilities/api/semgrep-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.sarif")
                 )
             }
         }
