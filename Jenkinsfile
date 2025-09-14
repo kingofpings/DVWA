@@ -72,8 +72,8 @@ pipeline {
                     sh """
                         $SCANNER_HOME/bin/sonar-scanner \
                         -Dsonar.sources=vulnerabilities/api \
-                        -Dsonar.projectName='DVWA' \
-                        -Dsonar.projectKey=DVWA \
+                        -Dsonar.projectName='DVWA-${env.BRANCH_NAME}' \
+                        -Dsonar.projectKey=DVWA-${env.BRANCH_NAME} \
                         -Dsonar.host.url=${env.SONAR_HOST_URL} \
                     """
                 }
