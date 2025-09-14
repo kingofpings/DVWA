@@ -42,14 +42,12 @@ pipeline {
             steps {
                 script {
                     sh 'curl -o trivy-html.tpl https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl'
-                    dir('vulnerabilities/api') {
-                        sh """
-                            composer install --no-interaction --no-progress --prefer-dist
-                            pwd
-                            docker run --rm -v $PWD/vulnerabilities/api:/src -w /src returntocorp/semgrep semgrep scan --config=auto . --json --output=semgrep-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.sarif
-                        """
-                        archiveArtifacts "semgrep-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.sarif"
-                    }
+                    sh """
+                        composer install --no-interaction --no-progress --prefer-dist
+                        pwd
+                        docker run --rm -v $WORKSPACE/vulnerabilities/api:/src -w /src returntocorp/semgrep semgrep scan --config=auto . --json --output=semgrep-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.sarif
+                    """
+                    archiveArtifacts "$WORKSPACE/vulnerabilities/api/semgrep-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.sarif"
                     
                 }
             }
@@ -60,7 +58,7 @@ pipeline {
                 recordIssues(
                     enabledForFailure: true,
                     publishAllIssues: true,
-                    tool: sarif(pattern: "semgrep-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.sarif")
+                    tool: sarif(pattern: "$WORKSPACE/vulnerabilities/api/semgrep-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.sarif")
                 )
             }
         }
