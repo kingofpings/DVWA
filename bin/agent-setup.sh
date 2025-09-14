@@ -109,7 +109,7 @@ echo "Installing Composer..."
 curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
 
 echo "Installing Trivy..."
-TRIVY_VERSION=0.65.0
+TRIVY_VERSION=0.66.0
 wget https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz -O trivy.tar.gz
 tar -zxvf trivy.tar.gz
 sudo mv trivy /usr/local/bin/
