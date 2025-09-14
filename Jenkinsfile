@@ -253,7 +253,7 @@ pipeline {
     post {
         always {
             script {
-                sh '''
+                sh """
                     echo "Cleaning up resources..."
                     trivy clean --all || true
                     docker-compose down || true
@@ -261,7 +261,7 @@ pipeline {
                     docker network rm ${env.DEPLOY_NETWORK} -f || true
                     docker rmi ${env.IMAGE_NAME} ${env.IMAGE_NAME_BRANCH} || true
                     docker system prune -f || true
-                '''
+                """
                 cleanWs()
             }
         }
