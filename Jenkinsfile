@@ -83,12 +83,12 @@ pipeline {
                         // JSON report
                         sh """
                             docker run --rm aquasec/trivy fs . \
-                            --severity CRITICAL --format json --output trivy-report.json
+                            --severity CRITICAL --debug --format json --output trivy-report.json
                         """
                         // HTML report
                         sh """
                             docker run --rm -v $PWD:/project -w /project aquasec/trivy fs . \
-                            --severity CRITICAL --format template --template trivy-html.tpl --output trivy-report.html
+                            --severity CRITICAL --debug --format template --template trivy-html.tpl --output trivy-report.html
                             sudo chmod -R u+rwX $PWD
 
                         """
@@ -105,7 +105,7 @@ pipeline {
                 recordIssues(
                     enabledForFailure: true,
                     publishAllIssues: true,
-                    tool: trivy(pattern: 'trivy-report.json')
+                    tool: trivy(pattern: 'trivy-report.json', id: 'trivy-fs')
                 )
                 publishHTML([
                     reportDir: '.',
@@ -142,13 +142,13 @@ pipeline {
                     // JSON report
                     sh """
                         docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $PWD:/project -w /project \
-                        aquasec/trivy image --severity CRITICAL -f json -o trivy-image-report.json ${env.IMAGE_NAME}
+                        aquasec/trivy image --severity CRITICAL --debug -f json -o trivy-image-report.json ${env.IMAGE_NAME}
 
                     """
                     // HTML report
                     sh """
                         docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $PWD:/project -w /project \
-                        aquasec/trivy image --severity CRITICAL --format template --template trivy-html.tpl -o trivy-image-report.html ${env.IMAGE_NAME}
+                        aquasec/trivy image --debug --severity CRITICAL --format template --template trivy-html.tpl -o trivy-image-report.html ${env.IMAGE_NAME}
                         sudo chmod -R u+rwX $PWD
                     """
                 }
@@ -172,7 +172,7 @@ pipeline {
                 recordIssues(
                     enabledForFailure: true,
                     publishAllIssues: true,
-                    tool: trivy(pattern: 'trivy-image-report.json')
+                    tool: trivy(pattern: 'trivy-image-report.json', id: 'trivy-image')
                 )
                 publishHTML([
                     reportDir: '.',
