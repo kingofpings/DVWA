@@ -220,7 +220,6 @@ pipeline {
 
         stage('DAST with ZAP') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'DVWA_CREDENTIALS', usernameVariable: 'DVWA_USER', passwordVariable: 'DVWA_PASS')]) {
                 script {
                     def targetHost = 'dvwa'
                     def targetPort = env.DEPLOY_PORT ?: '8081'
@@ -234,7 +233,6 @@ pipeline {
                         zap-baseline.py -t ${targetUrl} -r zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.html \
                         -J zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.json -w zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.md -x zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.xml 2 || true
                     """
-                }
                 }
                 archiveArtifacts artifacts: "zap-work/zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.html,zap-work/zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.json,zap-work/zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.md,zap-work/zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.xml", allowEmptyArchive: true
             }
