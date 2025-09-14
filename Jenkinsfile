@@ -230,7 +230,6 @@ pipeline {
                     docker run --rm -v \$PWD/zap-work:/zap/wrk --network ${env.DEPLOY_NETWORK} -t ghcr.io/zaproxy/zaproxy:stable \
                         zap-baseline.py -t ${targetUrl} -r zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.html \
                         -J zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.json -w zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.md -x zap_report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.xml 2 || true
-                    sudo chown -R ${env.USERID}:${env.USERID} zap-work
                     """
                 }
                 }
