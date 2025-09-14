@@ -146,9 +146,9 @@ pipeline {
                     """
                     // HTML report
                     sh """
-                        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $PWD:/project -w /project \
+                        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --privileged -v $PWD:/project -w /project \
                         aquasec/trivy image --debug --severity CRITICAL --format template --template trivy-html.tpl -o trivy-image-report.html ${env.IMAGE_NAME}
-                        sudo chmod -R u+rwX $PWD
+                        sudo chown -R $USER:$USER $PWD
                         ls -la
                     """
                 }
