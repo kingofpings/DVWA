@@ -41,13 +41,12 @@ pipeline {
         stage('Build and Scan') {
             steps {
                 script {
-                    sh '''
-                        whoami
+                    sh """
                         curl -o trivy-html.tpl https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
                         cd vulnerabilities/api
                         composer install --no-interaction --no-progress --prefer-dist
                         docker run --rm -v $PWD:/src -w /src returntocorp/semgrep semgrep --config=auto . --json --output=semgrep-report.sarif
-                    '''
+                    """
                     archiveArtifacts 'vulnerabilities/api/semgrep-report.sarif'
                 }
             }
@@ -68,10 +67,10 @@ pipeline {
             }
             steps {
                 withSonarQubeEnv('SonarQubeScanner') {  // must match SonarQube server config name in Jenkins
-                    sh '''
+                    sh """
                         $SCANNER_HOME/bin/sonar-scanner \
                         -Dsonar.sources=vulnerabilities/api
-                    '''
+                    """
                 }
             }
         }
@@ -229,6 +228,7 @@ pipeline {
                     docker run --rm -v \$PWD/zap-work:/zap/wrk --network ${env.DEPLOY_NETWORK} -t ghcr.io/zaproxy/zaproxy:stable \
                         zap-baseline.py -t ${targetUrl} -r zap_report.html \
                         -J zap_report.json -w zap_report.md -x zap_report.xml 2 || true
+                    sudo chown -R ${env.USERID}:${env.USERID} zap-work
                     """
                 }
                 }
