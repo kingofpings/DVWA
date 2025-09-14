@@ -253,12 +253,15 @@ pipeline {
     post {
         always {
             script {
-                sh 'trivy clean --all || true'
-                sh 'docker-compose down || true'
-                sh 'docker network rm ${env.DEPLOY_NETWORK} -f || true'
-                sh 'docker rmi ${env.IMAGE_NAME} ${env.IMAGE_NAME_BRANCH} || true'
-                sh 'docker system prune -f || true'
-                sh 'docker volume rm ${env.DEPLOY_VOLUME} -f || true'
+                sh '''
+                    echo "Cleaning up resources..."
+                    trivy clean --all || true
+                    docker-compose down || true
+                    docker volume rm ${env.DEPLOY_VOLUME} -f || true
+                    docker network rm ${env.DEPLOY_NETWORK} -f || true
+                    docker rmi ${env.IMAGE_NAME} ${env.IMAGE_NAME_BRANCH} || true
+                    docker system prune -f || true
+                '''
                 cleanWs()
             }
         }
