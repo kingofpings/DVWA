@@ -141,18 +141,21 @@ pipeline {
                 script {
                     // JSON report
                     sh """
+                        mkdir -p $PWD/reports
+                        chmod 777 $PWD/reports
                         docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --privileged -v $PWD:/project -w /project \
-                        aquasec/trivy image --severity CRITICAL --debug -f json -o trivy-image-report.json ${env.IMAGE_NAME}
+                        aquasec/trivy image --severity CRITICAL --debug -f json -o reports/trivy-image-report.json ${env.IMAGE_NAME}
                     """
                     // HTML report
                     sh """
                         docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --privileged -v $PWD:/project -w /project \
-                        aquasec/trivy image --debug --severity CRITICAL --format template --template trivy-html.tpl -o trivy-image-report.html ${env.IMAGE_NAME}
+                        aquasec/trivy image --debug --severity CRITICAL --format template --template trivy-html.tpl -o reports/trivy-image-report.html ${env.IMAGE_NAME}
                         sudo chown -R $USER:$USER $PWD
                         ls -la
                     """
                 }
-                archiveArtifacts artifacts: 'trivy-image-report.json, trivy-image-report.html', allowEmptyArchive: true
+                archiveArtifacts artifacts: 'reports/trivy-image-report.json', allowEmptyArchive: true
+                archiveArtifacts artifacts: 'reports/trivy-image-report.html', allowEmptyArchive: true
             }
         }
 
@@ -176,7 +179,7 @@ pipeline {
                 )
                 publishHTML([
                     reportDir: '.',
-                    reportFiles: 'trivy-image-report.html',
+                    reportFiles: 'reports/trivy-image-report.html',
                     reportName: 'Trivy Image Report',
                     keepAll: true,
                     alwaysLinkToLastBuild: false,
