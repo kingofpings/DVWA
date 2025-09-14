@@ -168,7 +168,7 @@ pipeline {
                 )
                 publishHTML([
                     reportDir: '.',
-                    reportFiles: 'reports/trivy-image-report.html',
+                    reportFiles: 'trivy-image-report.html',
                     reportName: 'Trivy Image Report',
                     keepAll: true,
                     alwaysLinkToLastBuild: false,
@@ -227,9 +227,8 @@ pipeline {
                     mkdir -p zap-work
                     chmod 777 zap-work
                     docker run --rm -v \$PWD/zap-work:/zap/wrk --network ${env.DEPLOY_NETWORK} -t ghcr.io/zaproxy/zaproxy:stable \
-                        zap-baseline.py -t ${targetUrl} -g gen.conf -r zap_report.html \
+                        zap-baseline.py -t ${targetUrl} -r zap_report.html \
                         -J zap_report.json -w zap_report.md -x zap_report.xml 2 || true
-                    sudo chmod -R u+rwX $PWD
                     """
                 }
                 }
@@ -247,7 +246,6 @@ pipeline {
                     alwaysLinkToLastBuild: false,
                     allowMissing: true
                 ])
-                junit allowEmptyResults: true, testResults: 'zap-work/zap_report.xml'
             }
         }
     }
@@ -255,9 +253,10 @@ pipeline {
     post {
         always {
             script {
+                sh 'trivy clean --all || true'
                 sh 'docker-compose down || true'
                 sh 'docker network rm ${env.DEPLOY_NETWORK} -f || true'
-                sh 'docker image rm ${env.IMAGE_NAME} ${env.IMAGE_NAME_BRANCH} || true'
+                sh 'docker rmi ${env.IMAGE_NAME} ${env.IMAGE_NAME_BRANCH} || true'
                 sh 'docker system prune -f || true'
                 sh 'docker volume rm ${env.DEPLOY_VOLUME} -f || true'
                 cleanWs()
