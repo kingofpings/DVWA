@@ -108,7 +108,7 @@ pipeline {
                     reportFiles: 'trivy-report.html',
                     reportName: 'Trivy FS Report',
                     keepAll: true,
-                    alwaysLinkToLastBuild: false,
+                    alwaysLinkToLastBuild: true,
                     allowMissing: true
                 ])
             }
@@ -171,7 +171,7 @@ pipeline {
                     reportFiles: 'trivy-image-report.html',
                     reportName: 'Trivy Image Report',
                     keepAll: true,
-                    alwaysLinkToLastBuild: false,
+                    alwaysLinkToLastBuild: true,
                     allowMissing: true
                 ])
             }
@@ -243,7 +243,7 @@ pipeline {
                     reportFiles: 'zap_report.html',
                     reportName: 'ZAP Report',
                     keepAll: true,
-                    alwaysLinkToLastBuild: false,
+                    alwaysLinkToLastBuild: true,
                     allowMissing: true
                 ])
                 junit allowEmptyResults: true, testResults: 'zap-work/zap_report.xml'
