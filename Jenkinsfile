@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    triggers {
+        pollSCM('H * * * *')
+    }
+
     environment {
         REGISTRY_URL = '192.168.146.133:5000'
         DOCKER_CREDENTIALS_ID = 'dockerRegistry'
