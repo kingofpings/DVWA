@@ -3,6 +3,7 @@ pipeline {
 
     triggers {
         pollSCM('H/15 * * * *')
+        cron('H 0 * * *')
     }
 
     environment {
