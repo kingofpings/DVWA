@@ -50,7 +50,7 @@ pipeline {
                         cd $WORKSPACE/vulnerabilities/api
                         composer install --no-interaction --no-progress --prefer-dist
                         pwd
-                        docker run --rm -v $WORKSPACE/vulnerabilities/api:/src -w /src returntocorp/semgrep semgrep scan --config=auto . --json --output=semgrep-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.sarif
+                        docker run --rm -v $WORKSPACE/vulnerabilities:/src -w /src returntocorp/semgrep semgrep scan --config=auto . --json --output=semgrep-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.sarif
                     """
                     archiveArtifacts "vulnerabilities/api/semgrep-report-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.sarif"
                     
