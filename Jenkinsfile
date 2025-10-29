@@ -7,7 +7,7 @@ pipeline {
     }
 
     environment {
-        REGISTRY_URL = '192.168.146.133:5000'
+        REGISTRY_URL = '192.168.174.129:5000'
         DOCKER_CREDENTIALS_ID = 'dockerRegistry'
         DEPLOY_PORT = '8081'
     }
